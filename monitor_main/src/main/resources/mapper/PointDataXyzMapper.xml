@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.dzkj.mapper.data.PointDataXyzMapper">
+
+    <select id="getList" resultType="com.dzkj.biz.data.vo.PointDataXyzVO">
+        select pdx.*,
+               pg.name as groupName,
+               pm.name as missionName,
+               pj.name as projectName
+        from point_data_xyz pdx
+        left join point p on p.id = pdx.pid
+        left join pt_group pg on pg.id = p.pt_group_id
+        left join pro_mission pm on pm.id = pg.mission_id
+        left join project pj on pj.id = pm.project_id
+        where pm.id = #{cond.missionId}
+        and pg.id in
+        <foreach collection="cond.groupIds" index="index" item="item"
+                 separator="," open="(" close=")">
+            #{item}
+        </foreach>
+        <if test="cond.createTime != null">
+            and pdx.get_time <![CDATA[ >= ]]> #{cond.createTime}
+        </if>
+        order by pdx.get_time desc
+    </select>
+
+    <select id="getPage" resultType="com.dzkj.biz.data.vo.PointDataXyzVO">
+        select pdx.*,
+               pg.name as groupName,
+               pm.name as missionName,
+               pj.name as projectName
+        from point_data_xyz pdx
+        left join point p on p.id = pdx.pid
+        left join pt_group pg on pg.id = p.pt_group_id
+        left join pro_mission pm on pm.id = pg.mission_id
+        left join project pj on pj.id = pm.project_id
+        where pm.id = #{cond.missionId}
+        and pg.id in
+        <foreach collection="cond.groupIds" index="index" item="item"
+                 separator="," open="(" close=")">
+            #{item}
+        </foreach>
+        <if test="cond.createTime != null">
+            and pdx.get_time <![CDATA[ >= ]]> #{cond.createTime}
+        </if>
+        order by pdx.get_time desc
+    </select>
+
+    <select id="getDataByPidList" resultType="com.dzkj.biz.data.vo.PointDataXyzVO">
+        select pdx.id, pdx.pid, pdx.name, pdx.x, pdx.y
+        from point_data_xyz pdx
+        inner join
+        ( select pid, max(get_time) as max_get_time
+        from point_data_xyz
+        where pid in
+        <foreach collection="list" index="index" item="item"
+                 separator="," open="(" close=")">
+            #{item}
+        </foreach>
+        group by pid) temp
+        on temp.pid = pdx.pid and temp.max_get_time = pdx.get_time
+    </select>
+
+</mapper>

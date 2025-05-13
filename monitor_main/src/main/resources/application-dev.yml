@@ -1,0 +1,80 @@
+server:
+  port: 8001
+  servlet:
+    encoding:
+      force: true
+      charset: UTF-8
+  tomcat:
+    max-http-form-post-size: 100MB
+
+#日志配置
+logging:
+  level:
+    root: INFO
+    tk.mybatis: debug
+    com.dzkj.mapper: debug
+  config: classpath:logback/logback-${spring.profiles.active}.xml
+
+spring:
+  application:
+    name: DZ-MONITOR-2023
+  jackson:
+    time-zone: GMT+8
+  #文件上次大小限制
+  servlet:
+    multipart:
+      max-file-size: 100MB
+      max-request-size: 100MB
+  #数据库连接配置
+  datasource:
+    type: com.alibaba.druid.pool.DruidDataSource
+    driver-class-name: com.mysql.cj.jdbc.Driver
+#    url: jdbc:mysql://localhost:3306/monitor24?serverTimezone=GMT%2B8&useUnicode=true&characterEncoding=utf-8&useSSL=false&nullCatalogMeansCurrent=true
+#    username: root
+#    password: root
+    url: jdbc:mysql://39.99.160.188:3306/monitor24?serverTimezone=GMT%2B8&useUnicode=true&characterEncoding=utf-8&useSSL=false&nullCatalogMeansCurrent=true
+    username: fangjing
+    password: fangJing_9500
+  #redis配置
+  redis:
+    host: 127.0.0.1
+    port: 6379
+    password:
+    timeout: 10000
+
+#mybatis配置
+mybatis-plus:
+  mapper-locations: classpath:/mapper/*.xml
+  type-aliases-package: com.dzkj.**.entity.**
+  global-config:
+    db-config:
+      id-type: auto #主键类型  0:"数据库ID自增", 1:"用户输入ID",2:"全局唯一ID (数字类型唯一ID)", 3:"全局唯一ID UUID";
+  configuration:
+    # 驼峰下划线转换
+    map-underscore-to-camel-case: true
+    # 使用全局的映射器启用或者禁用缓存
+    cache-enabled: true
+    # 配置,但JDBC类型为空时,某些驱动程序 要指定值,default:OTHER，插入空值时不需要指定类型
+    jdbc-type-for-null: 'null'
+
+#微信公众号配置
+wx:
+  token: dzkj
+  #  appId: wx815b3b3dc6e59b48
+  #  appSecret: 54acb0ba838749b8a805af730f128a6b
+  appId: wxcbab46af7f5d5ec3
+  appSecret: dae1bd74f4e03d8edf066094d08a191e
+
+#数据交换系统配置
+data-swap:
+  appId: HFDZKJCSXM02
+  appKey: c5aebc6e20ea4c96ae59753a2ca222fb
+  publicKey: MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCJj2ZgXVqu5HRDw/90fXcPACFvPvlQIt48ZHtYue97lkizas0mVfOIpjOSglMcDpNcSYeLEcAg008pE/Y2NYhcsoxBfLgHgNbkSNNoI7R9rjElecxaGAMMSkD3CfAh/dlxLozFRvL3KTDny1iLCGJCyY2g24dDTSVL3VWgrONOpQIDAQAB
+  stdUrl: http://sanly.iask.in:8380/std_monitor/dataSwap
+  dzUrl: https://597098vw68.zicp.fun/mt/common/dz_monitor/dataSwap
+  dataType: 1
+
+#  netty通信端口
+netty:
+  port:
+    8008

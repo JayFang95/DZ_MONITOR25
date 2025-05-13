@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.dzkj.mapper.data_swap.PushPointMapper">
+
+    <select id="findCodeAndDeviceCategoryNotSame" resultType="java.lang.Integer">
+        select count(*)
+        from push_point
+        where `code` = #{code} and (
+        (`code` = #{code} and device_catagory != #{deviceCatagory})
+        or
+        (`code` != #{code} and device_catagory = #{deviceCatagory})
+        )
+        <if test="id != null">
+            and id != #{id}
+        </if>
+    </select>
+
+    <select id="queryByMissionId" resultType="com.dzkj.entity.data.PushPoint">
+        select pp.project_code, pp.pt_code, pp.point_id, pp.alarm_handler
+        from push_point pp
+            left join push_task pt on pp.push_task_id = pt.id
+        where pt.mission_id = #{missionId}
+    </select>
+
+</mapper>

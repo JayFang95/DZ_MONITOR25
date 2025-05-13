@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.dzkj.mapper.data_swap.PushTaskMapper">
+    <select id="queryList" resultType="com.dzkj.entity.data.PushTask">
+        select pt.*, pm.name as missionName
+        from push_task pt
+                 left join pro_mission pm on pt.mission_id = pm.id
+        where pt.company_id = #{companyId}
+    </select>
+</mapper>

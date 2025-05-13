@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.dzkj.mapper.project.ProjectGroupMapper">
+
+    <select id="listByUserId" resultType="com.dzkj.entity.project.ProjectGroup">
+        select pg.*
+        from project_group pg
+        left join user_group ug on pg.group_id = ug.group_id
+        where ug.user_id = #{userId}
+    </select>
+
+</mapper>

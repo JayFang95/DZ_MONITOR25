@@ -1,24 +1,23 @@
-# Compiled class file
+# 忽略所有 .class 文件
 *.class
 
-# Log file
+# 忽略所有 .log 文件
 *.log
 
-# BlueJ files
-*.ctxt
+# 忽略所有 .settings 目录
+.settings/
 
-# Mobile Tools for Java (J2ME)
-.mtj.tmp/
+# 忽略所有 .project 文件
+.project
 
-# Package Files #
-*.jar
-*.war
-*.nar
-*.ear
-*.zip
-*.tar.gz
-*.rar
+# 忽略所有 .idea 目录
+.idea/
 
-# virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
-hs_err_pid*
-replay_pid*
+# 忽略所有 .gitignore 文件
+.gitignore
+
+# 忽略所有 target 目录
+target/
+test/
+File/
+SurveyRobotOnline/

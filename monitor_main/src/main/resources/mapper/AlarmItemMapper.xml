@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.dzkj.mapper.alarm_setting.AlarmItemMapper">
+
+    <select id="findByPid" resultType="com.dzkj.entity.alarm_setting.AlarmItem" parameterType="java.lang.Long">
+        select * from alarm_item ai
+        left join pt_group pg on ai.alarm_group_id = pg.alarm_group_id
+        left join point pt on pg.id = pt.pt_group_id
+        where pt.id = #{pid}
+    </select>
+
+    <select id="getByPidList" resultType="com.dzkj.entity.alarm_setting.AlarmItem">
+        select ai.*, pt.id as ptId from alarm_item ai
+        left join pt_group pg on ai.alarm_group_id = pg.alarm_group_id
+        left join point pt on pg.id = pt.pt_group_id
+        where pt.id in
+        <foreach collection="list" index="index" item="item"
+                 separator="," open="(" close=")">
+            #{item}
+        </foreach>
+    </select>
+</mapper>

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.dzkj.mapper.param_set.SensorZlMapper">
+
+    <select id="getListByMissionId" resultType="com.dzkj.entity.param_set.SensorZl" parameterType="java.lang.Long">
+        select sz.*, pt.name as pointName, tz.name as typeZl from sensor_zl sz
+        left join point pt on sz.point_id = pt.id
+        left join type_zl tz on sz.type_zl_id = tz.id
+        where sz.point_id in (
+            select p.id from point p where p.pt_group_id in (
+                select g.id from pt_group g where g.mission_id = #{missionId}
+            )
+        )
+    </select>
+
+</mapper>

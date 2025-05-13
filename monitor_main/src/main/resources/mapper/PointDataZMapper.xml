@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.dzkj.mapper.data.PointDataZMapper">
+    <select id="getDataByCond" resultType="com.dzkj.biz.data.vo.ReportData">
+        select
+            pdz.z0 as num0,
+            pdz.total_z as totalNum,
+            pdz.total_z_prev as totalPreNum,
+            pdz.delt_z as deltNum,
+            pdz.v_delt_z as vDeltNum,
+            pdz.get_time as getTime,
+            pdz.prev_get_time as getTimePre,
+            pdz.pid as ptId,
+            p.name as ptName,
+            pg.alarm_group_id as alarmGroupId,
+            pg.name as groupName,
+            pm.id as missionId,
+            pm.name as missionName
+        from point_data_z pdz
+        left join point p on p.id = pdz.pid
+        left join pt_group pg on p.pt_group_id = pg.id
+        left join pro_mission pm on pg.mission_id = pm.id
+        left join project pj on pm.project_id = pj.id
+        where pdz.pid in
+        <foreach collection="list" index="index" item="item"
+                 separator="," open="(" close=")">
+            #{item}
+        </foreach>
+        and pdz.stop = false
+        <if test="cond.startDate != null">
+            and pdz.get_time <![CDATA[ >= ]]> #{cond.startDate}
+        </if>
+        <if test="cond.endDate != null">
+            and pdz.get_time <![CDATA[ <= ]]> #{cond.endDate}
+        </if>
+        order by pdz.get_time desc
+    </select>
+    <select id="getDateLimit" resultType="com.dzkj.entity.data.PointDataZ">
+        select DISTINCT get_time
+        from point_data_z
+        WHERE pid in
+        <foreach collection="list" index="index" item="item"
+                 separator="," open="(" close=")">
+            #{item}
+        </foreach>
+        ORDER BY get_time DESC LIMIT 5
+    </select>
+</mapper>

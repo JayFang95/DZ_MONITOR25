@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.dzkj.mapper.alarm_setting.AlarmGroupMapper">
+    <resultMap id="group" type="com.dzkj.entity.alarm_setting.AlarmGroup">
+        <id column="id" property="id"/>
+        <result property="name" column="name"/>
+        <result property="note" column="note"/>
+        <collection property="alarmItemList" ofType="com.dzkj.entity.alarm_setting.AlarmItem">
+            <result property="id" column="bid"/>
+            <result property="monitorType" column="monitor_type"/>
+            <result property="resultType" column="result_type"/>
+            <result property="resultItemType" column="result_item_type"/>
+            <result property="alarmLevel" column="alarm_level"/>
+            <result property="alarmThreshold" column="alarm_threshold"/>
+            <result property="alarmInfo" column="alarm_info"/>
+            <result property="unit" column="unit"/>
+        </collection>
+    </resultMap>
+
+    <select id="getAlarmList" resultType="com.dzkj.entity.alarm_setting.AlarmGroup">
+        SELECT * FROM alarm_group ag
+        WHERE ag.project_id = #{projectId} and ag.deleted = 0
+	    AND ag.id IN (
+            SELECT ai.alarm_group_id
+            FROM alarm_item ai
+            WHERE ai.monitor_type = ( SELECT pm.type FROM pro_mission pm WHERE pm.id = #{missionId})
+	    )
+    </select>
+</mapper>

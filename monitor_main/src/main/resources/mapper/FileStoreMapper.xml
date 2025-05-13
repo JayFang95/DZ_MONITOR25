@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.dzkj.mapper.file_store.FileStoreMapper">
+
+    <select id="getPage" resultType="com.dzkj.entity.file_store.FileStore">
+        select fs.*,
+               p.name as projectName, pm.name as missionName
+        from file_store fs
+        left join project p on p.id = fs.project_id
+        left join pro_mission pm on pm.id = fs.mission_id
+        where
+        <if test="cond.missionId == null">
+            fs.project_id in
+            <foreach collection="cond.projectIds" index="index" item="item"
+                     separator="," open="(" close=")">
+                #{item}
+            </foreach>
+
+            and (fs.mission_id in
+            <foreach collection="cond.missionIds" index="index" item="item"
+                     separator="," open="(" close=")">
+                #{item}
+            </foreach>
+            or fs.mission_id is null)
+        </if>
+        <if test="cond.missionId != null">
+            fs.mission_id = #{cond.missionId}
+        </if>
+
+        <if test="cond.createTime != null">
+            and fs.create_time <![CDATA[ >= ]]> #{cond.createTime}
+        </if>
+        order by fs.create_time desc
+    </select>
+
+</mapper>

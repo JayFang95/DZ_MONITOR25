@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.dzkj.mapper.data.PointDataXyzhMapper">
+    <select id="getDataByCond" resultType="com.dzkj.biz.data.vo.ReportData">
+        select
+            pdz.p0 as num0,
+            pdz.total_p as totalNum,
+            pdz.total_p_prev as totalPreNum,
+            pdz.delt_p as deltNum,
+            pdz.v_delt_p as vDeltNum,
+            pdz.get_time as getTime,
+            pdz.get_time_prev as getTimePre,
+            pdz.pid as ptId,
+            p.name as ptName,
+            pg.alarm_group_id as alarmGroupId,
+            pg.name as groupName,
+            pm.id as missionId,
+            pm.name as missionName
+        from point_data_xyzh pdz
+        left join point p on p.id = pdz.pid
+        left join pt_group pg on p.pt_group_id = pg.id
+        left join pro_mission pm on pg.mission_id = pm.id
+        left join project pj on pm.project_id = pj.id
+        where pdz.pid in
+        <foreach collection="list" index="index" item="item"
+                 separator="," open="(" close=")">
+            #{item}
+        </foreach>
+        and pdz.stop = false
+        <if test="cond.startDate != null">
+            and pdz.get_time <![CDATA[ >= ]]> #{cond.startDate}
+        </if>
+        <if test="cond.endDate != null">
+            and pdz.get_time <![CDATA[ <= ]]> #{cond.endDate}
+        </if>
+        order by pdz.get_time desc
+    </select>
+
+    <select id="queryLatestData" resultType="com.dzkj.entity.data.PointDataXyzh">
+        select pdh.*
+        from point_data_xyzh pdh
+        where pdh.recycle_num = (
+            select max(recycle_num) from point_data_xyzh where pid in
+            <foreach collection="list" index="index" item="item"
+                     separator="," open="(" close=")">
+                #{item}
+            </foreach>
+        )
+        and pdh.pid in
+        <foreach collection="list" index="index" item="item"
+                 separator="," open="(" close=")">
+            #{item}
+        </foreach>
+
+    </select>
+
+    <select id="getLastNoAlarmData" resultType="com.dzkj.entity.data.PointDataXyzh">
+        select pdh.pid, pdh.name, pdh.over_limit, pdh.get_time, pdh.recycle_num,
+        pdh.x, pdh.total_x, pdh.delt_x,
+        pdh.y, pdh.total_y, pdh.delt_y,
+        pdh.z, pdh.total_z, pdh.delt_z,
+        pdh.p, pdh.total_p, pdh.delt_p
+        from point_data_xyzh pdh
+        where pdh.pid = #{pointId} and pdh.over_limit = false
+            and pdh.recycle_num = (
+            select max(recycle_num) from point_data_xyzh
+                                    where pid = #{pointId} and pdh.over_limit = false
+            )
+    </select>
+    <select id="getDateLimit" resultType="com.dzkj.entity.data.PointDataXyzh">
+        select DISTINCT get_time
+        from point_data_xyzh
+        WHERE pid in
+        <foreach collection="list" index="index" item="item"
+                 separator="," open="(" close=")">
+            #{item}
+        </foreach>
+        ORDER BY get_time DESC LIMIT 5
+    </select>
+
+    <select id="getEarliestRecycleData" resultType="com.dzkj.entity.data.PointDataXyzh">
+        select pdh.pid, pdh.name, pdh.get_time,
+               pdh.x, pdh.y, pdh.z,
+               pdh.ha, pdh.va, pdh.sd,
+               pdh.recycle_num
+        from point_data_xyzh pdh
+        join (
+            select pid, min(recycle_num) as minRecycleNum
+            from point_data_xyzh where pid in
+            <foreach collection="list" index="index" item="item"
+                     separator="," open="(" close=")">
+                #{item}
+            </foreach>
+            group by pid
+        ) as pdh2
+        on pdh.pid = pdh2.pid and pdh.recycle_num = pdh2.minRecycleNum
+    </select>
+
+    <select id="getEarliestResetRecycleData" resultType="com.dzkj.entity.data.PointDataXyzh">
+        select pdh.pid, pdh.name, pdh.get_time,
+        pdh.x, pdh.y, pdh.z,
+        pdh.ha, pdh.va, pdh.sd,
+        pdh.recycle_num
+        from point_data_xyzh pdh
+        join (
+            select pid, min(recycle_num) as minRecycleNum
+            from point_data_xyzh where `status` in ("破坏重埋", "基准点修正") and pid in
+            <foreach collection="list" index="index" item="item"
+                     separator="," open="(" close=")">
+                #{item}
+            </foreach>
+            group by pid
+        ) as pdh2
+        on pdh.pid = pdh2.pid and pdh.recycle_num = pdh2.minRecycleNum
+    </select>
+</mapper>
