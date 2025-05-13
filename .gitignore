@@ -21,3 +21,8 @@ target/
 test/
 File/
 SurveyRobotOnline/
+monitor_robot/
+monitor_control_box/
+
+#安全文件
+SmsUtil.java
