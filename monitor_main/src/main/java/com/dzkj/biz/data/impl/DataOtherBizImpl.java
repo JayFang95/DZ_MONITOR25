@@ -13,6 +13,7 @@ import com.dzkj.common.util.ResponseUtil;
 import com.dzkj.entity.alarm_setting.AlarmInfo;
 import com.dzkj.entity.data.*;
 import com.dzkj.entity.param_set.Point;
+import com.dzkj.entity.survey.RobotSurveyData;
 import com.dzkj.service.alarm_setting.IAlarmInfoService;
 import com.dzkj.service.data.*;
 import com.dzkj.service.param_set.IPointService;
@@ -77,6 +78,8 @@ public class DataOtherBizImpl implements IDataOtherBiz {
     private IPointService pointService;
     @Autowired
     private IAlarmInfoService alarmInfoService;
+    @Autowired
+    private IRobotSurveyDataService robotSurveyDataService;
 
     @Override
     public IPage<RobotSurveyDataVO> getXyzPage(Integer pi, Integer ps, OtherDataCondition condition) {
@@ -184,12 +187,15 @@ public class DataOtherBizImpl implements IDataOtherBiz {
 
     @Override
     public boolean deleteData(OtherDataCondition cond) {
-        if (cond.getMissionIds() == null || cond.getMissionIds().size() == 0){
+        if (cond.getMissionIds() == null || cond.getMissionIds().isEmpty()){
             return false;
         }
+        LambdaQueryWrapper<RobotSurveyData> wrapper = new LambdaQueryWrapper<>();
+        wrapper.in(RobotSurveyData::getMissionId, cond.getMissionIds());
+        robotSurveyDataService.remove(wrapper);
         List<Point> points = pointService.queryByMissionIds(cond.getMissionIds());
         List<Long> pidList = points.stream().map(Point::getId).collect(Collectors.toList());
-        if (pidList.size() == 0){
+        if (pidList.isEmpty()){
             return false;
         }
         LambdaQueryWrapper<PointDataZ> wrapper1 = new LambdaQueryWrapper<>();

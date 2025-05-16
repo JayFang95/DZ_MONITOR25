@@ -3922,7 +3922,7 @@ public class SurveyBiz {
         String rawDatas = getSurveyRawDatas(surveyResults);
 
         //从surveyCalcResults中获得计算数据
-        StringBuilder calcDatas = new StringBuilder("点名,水平角盘左,盘右,2C;均值;测回均值;");
+        StringBuilder calcDatas = new StringBuilder("点名,水平角;盘左,盘右,2C;均值;测回均值;");
         for (SurveyCalcResult r : surveyCalcResults) {
             calcDatas.append(r.getPtName()).append(",")
                     .append(r.getHa1()).append(",")
@@ -3932,7 +3932,7 @@ public class SurveyBiz {
                     .append(r.getHa()).append(";");
         }
 
-        calcDatas.append("点名,竖直角盘左,盘右,i值,均值,测回均值;");
+        calcDatas.append("点名,竖直角;盘左,盘右,i值,均值,测回均值;");
         for (SurveyCalcResult r : surveyCalcResults) {
             calcDatas.append(r.getPtName()).append(",")
                     .append(r.getVa1()).append(",")
@@ -4025,6 +4025,8 @@ public class SurveyBiz {
                 .append(st.getY())
                 .append(",")
                 .append(st.getZ())
+                .append(",")
+                .append(st.getHi())
                 .append(";");
         for (SurveyResult r : surveyResults){
             rawDatas.append("Measure,")
@@ -4038,7 +4040,9 @@ public class SurveyBiz {
                     .append(r.getChIndex() + 1).append(",")
                     .append(r.isFace1() ? 1 : 2).append(",")
                     .append(r.isSuccess() ? 0 : 99).append(",")
-                    .append(DateUtil.dateToDateString(r.getGetTime(), DateUtil.yyyy_MM_dd_HH_mm_ss_EN)).append(";");
+                    .append(DateUtil.dateToDateString(r.getGetTime(), DateUtil.yyyy_MM_dd_HH_mm_ss_EN)).append(",")
+                    .append(r.getHt())
+                    .append(";");
         }
 
         rawDatas.append("End;");

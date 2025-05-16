@@ -23,6 +23,7 @@ File/
 SurveyRobotOnline/
 monitor_robot/
 monitor_control_box/
+resources/
 
 #安全文件
 SmsUtil.java
