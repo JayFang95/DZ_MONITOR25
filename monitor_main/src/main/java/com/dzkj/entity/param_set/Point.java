@@ -78,5 +78,23 @@ public class Point implements Serializable {
      */
     private int seq;
 
+    /**
+     * 是否启用推送规则:启用后，测量数据超过阈值，会自动修正
+     */
+    private Boolean enableRule;
+
+    /**
+     * 报警修正区间值：
+     * 单次负值小；单次负值大；单次正值小；单次正值大
+     * 累计负值小；累计负值大；累计正值小；累计正值大
+     */
+    private double minNegDelt;
+    private double maxNegDelt;
+    private double minPosDelt;
+    private double maxPosDelt;
+    private double minNegTotal;
+    private double maxNegTotal;
+    private double minPosTotal;
+    private double maxPosTotal;
 
 }

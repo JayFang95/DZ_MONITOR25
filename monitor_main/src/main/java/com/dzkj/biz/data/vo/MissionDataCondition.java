@@ -40,4 +40,13 @@ public class MissionDataCondition {
 
     // 2024/11/20 数据库表来源: 1-原表  2-同步表
     private Integer dbSource;
+
+    /**
+     * 是否多周期查询
+     */
+    private Boolean isMultiCycle;
+    /**
+     * 周期数
+     */
+    private Integer cycleNum;
 }

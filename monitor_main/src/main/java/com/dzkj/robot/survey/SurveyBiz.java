@@ -780,6 +780,7 @@ public class SurveyBiz {
 
         //处于待测状态
         controlBoxAo.setSurveyStatus("待测");
+        this.surveyAtOnce = false;
         // 2023/6/26 记录状态
         controlBoxService.updateSurvey(controlBoxAo.getId(), 1);
         //配置了测量策略，启动系统监测
@@ -823,6 +824,7 @@ public class SurveyBiz {
                 openDeviceRetryTime = 1;
                 //仪器从关机状态到开机可能需要十几秒的时间，期间不允许“停止测量”
                 this.controlBoxAo.setSurveyStatus("在测");
+                this.surveyAtOnce = false;
                 startSurvey(false);
                 return;
             }
@@ -842,6 +844,7 @@ public class SurveyBiz {
             openDeviceRetryTime = 1;
             //仪器从关机状态到开机可能需要十几秒的时间，期间不允许“停止测量”
             this.controlBoxAo.setSurveyStatus("在测");
+            this.surveyAtOnce = false;
             startSurvey(false);
         }
     }
@@ -2731,7 +2734,6 @@ public class SurveyBiz {
         controlBoxAo.setSurveyStatus(surveyStatus);
         this.startSurveying = false;
         this.surveyFinished = true;
-        this.surveyAtOnce = false;
         //关闭设备
         if (realStop) {
             this.prepareStop(directInvoke);

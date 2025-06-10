@@ -258,7 +258,7 @@ public class BaseDataBiz {
         for (int i = 0; i < 6; i++) {
             List<AlarmItem> filterList = filterAlarmItem(i, totalList);
             double value = getCompareValue2(dataXyzh, type, i);
-            if (filterList.size()>0){
+            if (!filterList.isEmpty()){
                 String originInfo;
                 int level = 0;
                 String levelInfo = "";

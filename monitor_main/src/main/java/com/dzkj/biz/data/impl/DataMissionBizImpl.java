@@ -128,19 +128,34 @@ public class DataMissionBizImpl implements IDataMissionBiz {
      **/
     private ResponseUtil getXyzPage(Integer pi, Integer ps, MissionDataCondition condition) {
         LambdaQueryWrapper<PointDataXyzh> wrapper = new LambdaQueryWrapper<>();
-        wrapper.in(PointDataXyzh::getPid, condition.getPidList())
-                .eq(condition.getOverLimit()!=null, PointDataXyzh::getOverLimit, condition.getOverLimit())
-                .ge(condition.getStartDate()!=null, PointDataXyzh::getGetTime, condition.getStartDate())
-                .le(condition.getEndDate()!=null, PointDataXyzh::getGetTime, condition.getEndDate())
-                .orderByDesc(PointDataXyzh::getGetTime).orderByDesc(PointDataXyzh::getRecycleNum);
         IPage<PointDataXyzhVO> page;
-        if(ps == CommonConstant.SEARCH_ALL_NO){
+        if (condition.getIsMultiCycle() != null && !condition.getIsMultiCycle()){
+            List<PointDataXyzhVO> list;
+            if (condition.getCycleNum() != null && condition.getCycleNum() > 0){
+                wrapper.in(PointDataXyzh::getPid, condition.getPidList())
+                        .eq(PointDataXyzh::getRecycleNum, condition.getCycleNum())
+                        .orderByDesc(PointDataXyzh::getGetTime);
+                list = DzBeanUtils.listCopy(dataXyzhService.list(wrapper), PointDataXyzhVO.class);
+            } else {
+                list = DzBeanUtils.listCopy(dataXyzhService.queryLatestData(condition.getPidList()), PointDataXyzhVO.class);
+            }
             page = new Page<>(pi, ps);
-            List<PointDataXyzhVO> list = DzBeanUtils.listCopy(dataXyzhService.list(wrapper), PointDataXyzhVO.class);
-            page.setTotal(Math.min(list.size(), CommonConstant.SEARCH_ALL_NO));
+            page.setTotal(list.size());
             page.setRecords(list);
-        }else {
-            page = DzBeanUtils.pageCopy(dataXyzhService.page(new Page<>(pi, ps), wrapper), PointDataXyzhVO.class);
+        } else {
+            wrapper.in(PointDataXyzh::getPid, condition.getPidList())
+                    .eq(condition.getOverLimit()!=null, PointDataXyzh::getOverLimit, condition.getOverLimit())
+                    .ge(condition.getStartDate()!=null, PointDataXyzh::getGetTime, condition.getStartDate())
+                    .le(condition.getEndDate()!=null, PointDataXyzh::getGetTime, condition.getEndDate())
+                    .orderByDesc(PointDataXyzh::getGetTime).orderByDesc(PointDataXyzh::getRecycleNum);
+            if(ps == CommonConstant.SEARCH_ALL_NO){
+                page = new Page<>(pi, ps);
+                List<PointDataXyzhVO> list = DzBeanUtils.listCopy(dataXyzhService.list(wrapper), PointDataXyzhVO.class);
+                page.setTotal(Math.min(list.size(), CommonConstant.SEARCH_ALL_NO));
+                page.setRecords(list);
+            }else {
+                page = DzBeanUtils.pageCopy(dataXyzhService.page(new Page<>(pi, ps), wrapper), PointDataXyzhVO.class);
+            }
         }
         if (page.getTotal() > 0) {
             SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");

@@ -30,7 +30,6 @@ import org.springframework.stereotype.Service;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 /**
  * Copyright(c),2018-2023,合肥市鼎足空间技术有限公司
@@ -431,7 +430,7 @@ public class PointDataXyzhBiz implements IPointDataXyzhBiz {
                 dataVO.setOverLimit(true);
                 dataVO.setOverLimitInfo(sb.substring(0, sb.toString().length()-1));
                 // 生成报警信息对象
-                if (infoList.size()>0){
+                if (!infoList.isEmpty()){
                     for (String checkInfo : infoList) {
                         alarmInfoList.add(getAlarmDataXyz(checkInfo, mission, dataVO));
                     }
@@ -441,13 +440,103 @@ public class PointDataXyzhBiz implements IPointDataXyzhBiz {
                 dataVO.setOverLimit(false);
             }
             // region: 2024/11/22 判断任务是否启用推送规则 ：开启根据报警阈值修正测量数据
-            if (mission.getEnableRule()){
+            Optional<Point> optional = points.stream().filter(item -> item.getId().equals(dataVO.getPid())).findAny();
+            if (optional.isPresent() && optional.get().getEnableRule()
+                    && (!totalAlarm.isEmpty() || !singleAlarm.isEmpty())){
+                Point point = optional.get();
                 //只统计X Y Z四个值的单次和累计变化量超限情况
-                List<String> allAlarmName = Stream.concat(totalAlarm.stream(), singleAlarm.stream()).distinct().collect(Collectors.toList());
-                if (allAlarmName.size() > 0) {
+                List<String> allAlarmName = new ArrayList<>();
+                //2025-06-09：区间验证时不在区间的不允许修正超限值，标记点超限
+                //x超限检查
+                boolean xOver = false;
+                if (singleAlarm.contains("0")){
+                    if(totalAlarm.contains("0")){
+                        //单次和累计都超限:单次和累计区间验证
+                        if (checkDeltEnable(dataVO.getDeltX(), point) && checkTotalEnable(dataVO.getTotalX(), point)){
+                            allAlarmName.add("0");
+                        } else {
+                            xOver = true;
+                        }
+                    } else {
+                        //单次超限累计未超限:单次区间验证
+                        if (checkDeltEnable(dataVO.getDeltX(), point)){
+                            allAlarmName.add("0");
+                        } else {
+                            xOver = true;
+                        }
+                    }
+                } else {
+                    if(totalAlarm.contains("0")){
+                        //单次未超限累计超限:累计区间验证
+                        if (checkTotalEnable(dataVO.getTotalX(), point)){
+                            allAlarmName.add("0");
+                        } else {
+                            xOver = true;
+                        }
+                    }
+                }
+                //y超限检查
+                boolean yOver = false;
+                if (singleAlarm.contains("1")){
+                    if(totalAlarm.contains("1")){
+                        //单次和累计都超限:单次和累计区间验证
+                        if (checkDeltEnable(dataVO.getDeltY(), point) && checkTotalEnable(dataVO.getTotalY(), point)){
+                            allAlarmName.add("1");
+                        } else {
+                            yOver = true;
+                        }
+                    } else {
+                        //单次超限累计未超限:单次区间验证
+                        if (checkDeltEnable(dataVO.getDeltY(), point)){
+                            allAlarmName.add("1");
+                        } else {
+                            yOver = true;
+                        }
+                    }
+                } else {
+                    if(totalAlarm.contains("1")){
+                        //单次未超限累计超限:单次和累计区间验证
+                        if (checkTotalEnable(dataVO.getTotalY(), point)){
+                            allAlarmName.add("1");
+                        } else {
+                            yOver = true;
+                        }
+                    }
+                }
+                //z超限检查
+                boolean zOver = false;
+                if (singleAlarm.contains("2")){
+                    if(totalAlarm.contains("2")){
+                        //单次和累计都超限:单次和累计区间验证
+                        if (checkDeltEnable(dataVO.getDeltZ(), point) && checkTotalEnable(dataVO.getTotalZ(), point)){
+                            allAlarmName.add("2");
+                        } else {
+                            zOver = true;
+                        }
+                    } else {
+                        //单次超限累计未超限:单次区间验证
+                        if (checkDeltEnable(dataVO.getDeltZ(), point)){
+                            allAlarmName.add("2");
+                        } else {
+                            zOver = true;
+                        }
+                    }
+                } else {
+                    if(totalAlarm.contains("2")){
+                        //单次未超限累计超限:累计区间验证
+                        if (checkTotalEnable(dataVO.getTotalZ(), point)){
+                            allAlarmName.add("2");
+                        } else {
+                            zOver = true;
+                        }
+                    }
+                }
+
+//                List<String> allAlarmName = Stream.concat(totalAlarm.stream(), singleAlarm.stream()).distinct().collect(Collectors.toList());
+                if (!allAlarmName.isEmpty()) {
                     correctTotalAndSingleSurveyData(dataVO, lastData, items, allAlarmName, mission, points, 1);
                 }
-                dataVO.setOverLimit(false);
+                dataVO.setOverLimit(xOver || yOver || zOver);
             }
             // endregion: 2024/11/22 判断任务是否启用推送规则 ：开启根据报警阈值修正测量数据
             dataList.add(DzBeanUtils.propertiesCopy(dataVO, PointDataXyzh.class));
@@ -455,6 +544,34 @@ public class PointDataXyzhBiz implements IPointDataXyzhBiz {
             for (PointDataXyzh dataXyzh : dataList) {
                 dataXyzh.setGetTime(dataList.get(0).getGetTime());
             }
+        }
+    }
+
+    /**
+     * 单次超限区间验证
+     * @param value 超限值
+     * @param pt 测点
+     * @return 验证结果
+     */
+    private boolean checkDeltEnable(double value, Point pt){
+        if(value > 0){
+            return pt.getMinPosDelt() <= value && value <= pt.getMaxPosDelt();
+        } else {
+            return pt.getMinNegDelt() <= value && value <= pt.getMaxNegDelt();
+        }
+    }
+
+    /**
+     * 累计超限区间验证
+     * @param value 超限值
+     * @param pt 测点
+     * @return 验证结果
+     */
+    private boolean checkTotalEnable(double value, Point pt){
+        if(value > 0){
+            return pt.getMinPosTotal() <= value && value <= pt.getMaxPosTotal();
+        } else {
+            return pt.getMinNegTotal() <= value && value <= pt.getMaxNegTotal();
         }
     }
 
@@ -477,7 +594,7 @@ public class PointDataXyzhBiz implements IPointDataXyzhBiz {
         //验证新数据是否符合报警阈值
         List<String> correctTotalAlarm = BaseDataBiz.checkValueOverXyz(dataVO, items, "累计变化量", new AtomicInteger(), new StringBuilder(), new ArrayList<>());
         List<String> correctSingleAlarm = BaseDataBiz.checkValueOverXyz(dataVO, items, "单次变化量", new AtomicInteger(), new StringBuilder(), new ArrayList<>());
-        if ((correctTotalAlarm.size() > 0 || correctSingleAlarm.size() > 0) && i <= 5) {
+        if ((!correctTotalAlarm.isEmpty() || !correctSingleAlarm.isEmpty()) && i <= 5) {
             correctTotalAndSingleSurveyData(dataVO, lastData, items, allAlarmName, mission,  points, i + 1);
         }
     }
