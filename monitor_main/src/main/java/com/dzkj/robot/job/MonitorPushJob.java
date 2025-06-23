@@ -142,7 +142,7 @@ public class MonitorPushJob implements Job {
         if (mission == null || StringUtils.isEmpty(mission.getNoDataAlarmGroupIdStr())) {
             return;
         }
-        qwMsgService.sendSurveyOrUploadFailNotify(mission, serialNo, 2);
+        qwMsgService.sendSurveyOrUploadFailNotify(mission, serialNo, 2, null);
     }
 
     /**

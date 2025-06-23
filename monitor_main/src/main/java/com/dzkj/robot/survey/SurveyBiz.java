@@ -1931,6 +1931,14 @@ public class SurveyBiz {
                         log.warn("surveyAtOnce socket发送失败，原因：{}", e.getMessage());
                     }
                 }
+
+                // region 2025/06/20 生成漏测点信息并发送
+                String missInfo = createMissSurveyPtInfo(dataXyzhs);
+                if (missInfo != null) {
+                    qwMsgService.handleSurveyFail(controlBoxAo.getMissionId(), controlBoxAo.getSerialNo(), recycleNum, missInfo);
+                }
+                // endregion 2024/06/20 生成漏测点信息并发送
+
                 // region 2024/11/26 测量成功发送结果到微信
                 qwMsgService.sendSurveyResultMsg(dataXyzhs, controlBoxAo.getMissionId(), -1);
                 // endregion 2024/11/26 测量成功发送结果到微信
@@ -2008,6 +2016,30 @@ public class SurveyBiz {
         this.onSubActionCompleted(result);
     }
     //endregion 事件处理函数
+
+    /**
+     * 生成漏测点信息
+     * @param dataXyzhs 测量结果
+     * @return 漏测点信息
+     */
+    private String createMissSurveyPtInfo(List<PointDataXyzh> dataXyzhList) {
+        StringBuilder missInfo = null;
+        List<Long> ptIds = dataXyzhList.stream().map(PointDataXyzh::getPid).collect(Collectors.toList());
+        for (int i = 1; i < surveyCfgPoints.size(); i++) {
+            SurveyCfgPoint cfgPoint = surveyCfgPoints.get(i);
+            if (!ptIds.contains(cfgPoint.getId())) {
+                if (missInfo == null) {
+                    missInfo = new StringBuilder(cfgPoint.getName());
+                } else {
+                    missInfo.append(",").append(cfgPoint.getName());
+                }
+            }
+        }
+        if (missInfo != null) {
+            return missInfo.toString();
+        }
+        return null;
+    }
 
     /**
      * 查询本次测量数据
@@ -2639,7 +2671,14 @@ public class SurveyBiz {
                     //保存本次结果
                     List<Long> surveyCfgPointIds = new ArrayList<>();
                     this.surveyCfgPointGroup.forEach(surveyCfgPoint -> surveyCfgPoint.forEach(item -> surveyCfgPointIds.add(item.getId())));
-                    dataXyzhBiz.saveRobotResultOnSuccess(finalResults, surveyData, false, isSurveyAtOnce(), hasGroupSurvey, surveyCfgPointIds, currentGroupIndex);
+                    List<PointDataXyzh> dataXyzhs = dataXyzhBiz.saveRobotResultOnSuccess(finalResults, surveyData, false, isSurveyAtOnce(), hasGroupSurvey, surveyCfgPointIds, currentGroupIndex);
+
+                    // region 2025/06/20 生成漏测点信息并发送
+                    String missInfo = createMissSurveyPtInfo(dataXyzhs);
+                    if (missInfo != null) {
+                        qwMsgService.handleSurveyFail(controlBoxAo.getMissionId(), controlBoxAo.getSerialNo(), recycleNum, missInfo);
+                    }
+                    // endregion 2024/06/20 生成漏测点信息并发送
 
                     //输出测量反馈信息
                     if (!surveyBackInfos.isEmpty()) {

@@ -233,10 +233,36 @@ public class QwMsgService {
                     return;
                 }
                 //发送漏测报警
-                sendSurveyOrUploadFailNotify(mission, serialNo, 1);
+                sendSurveyOrUploadFailNotify(mission, serialNo, 1, "全部漏测");
                 log.info("{}{}漏测报警处理结束", missionId, serialNo);
             } catch (Exception e) {
                 log.error("{}{}漏测报警处理异常:{}", missionId, serialNo, e.getMessage());
+            }
+        }
+    }
+
+    /**
+     * 自动化测量漏测处理-点漏测
+     *
+     * @param missionId  missionId
+     * @param serialNo   serialNo
+     * @param recycleNum recycleNum
+     */
+    public void handleSurveyFail(Long missionId, String serialNo, int recycleNum, String missInfo){
+        synchronized (this) {
+            try {
+                log.info("开始处理{}{}测点漏测通知", missionId, serialNo);
+                //记录漏传信息
+                ProMission mission = missionService.getById(missionId);
+                if (mission == null || StringUtils.isEmpty(mission.getNoDataAlarmGroupIdStr()) || !mission.getAlarmSurvey()) {
+                    log.info("{}{}测点漏测通知处理结束,无推送对象", missionId, serialNo);
+                    return;
+                }
+                //发送漏测报警
+                sendSurveyOrUploadFailNotify(mission, serialNo, 1, missInfo);
+                log.info("{}{}测点漏测通知处理结束", missionId, serialNo);
+            } catch (Exception e) {
+                log.error("{}{}测点漏测通知处理异常:{}", missionId, serialNo, e.getMessage());
             }
         }
     }
@@ -323,8 +349,9 @@ public class QwMsgService {
      * @param mission mission
      * @param serialNo serialNo
      * @param type type 1-漏测  2-漏传
+     * @param missInfo type 1-漏测:漏测点信息
      */
-    public void sendSurveyOrUploadFailNotify(ProMission mission, String serialNo, int type){
+    public void sendSurveyOrUploadFailNotify(ProMission mission, String serialNo, int type, String missInfo){
         if (type == 1 && !mission.getAlarmSurvey()){
             log.info("未开启漏测报警推送");
             return;
@@ -351,6 +378,9 @@ public class QwMsgService {
         sb.append("【").append(type == 1 ? "漏测报警信息】\r\n\r\n" : "漏传报警信息】\r\n\r\n");
         sb.append("监测任务: ").append(mission.getName()).append("\r\n");
         sb.append("控制器编号: ").append(serialNo).append("\r\n");
+        if(type == 1){
+            sb.append("漏测点: ").append(missInfo);
+        }
         TextVO textVO = new TextVO(sb.toString());
         msgVO.setText(textVO);
         //发送应用信息
