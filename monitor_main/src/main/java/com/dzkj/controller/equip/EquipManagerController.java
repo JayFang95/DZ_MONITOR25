@@ -101,5 +101,11 @@ public class EquipManagerController {
         return ResponseUtil.success(equipManagerBiz.getListApp(missionId));
     }
 
+    @RequestMapping(value = "common/equip/list/sound/{missionId}", method = RequestMethod.GET)
+    @SysOperateLog(value = "查询任务关联声光报警器信息", type = LogConstant.RETRIEVE, modelName = LogConstant.EQUIP_INFO)
+    public ResponseUtil getSoundControlBoxList(@PathVariable("missionId") Long missionId) {
+        return ResponseUtil.success(equipManagerBiz.getSoundControlBoxList(missionId));
+    }
+
 
 }

@@ -2,7 +2,7 @@ package com.dzkj.biz.data;
 
 import com.dzkj.bean.SurveyOnceResult;
 import com.dzkj.bean.SurveyPoint;
-import com.dzkj.entity.data.PointDataXyzh;
+import com.dzkj.biz.data.vo.PointDataXyzhDto;
 
 import java.util.Date;
 import java.util.List;
@@ -65,8 +65,8 @@ public interface IPointDataXyzhBiz {
      * @date 2023/3/24 14:19
      * @return: void
      **/
-    List<PointDataXyzh> saveRobotResultOnSuccess(List<String> finalResults, String surveyData, boolean hasGroup,
-                                                 boolean surveyAtOnce, boolean hasGroupSurvey, List<Long> surveyCfgPointIds, int groupIndex);
+    PointDataXyzhDto saveRobotResultOnSuccess(List<String> finalResults, String surveyData, boolean hasGroup,
+                                              boolean surveyAtOnce, boolean hasGroupSurvey, List<Long> surveyCfgPointIds, int groupIndex);
 
     /**
      * 保存失败记录

@@ -465,6 +465,12 @@ public class RobotSurveyControlBiz implements IRobotSurveyControlBiz {
         }
         return false;
     }
+
+    @Override
+    public boolean soundLightTest(List<String> serialNoList) {
+        ChannelHandlerUtil.sendSoundAlarmCode(String.join(",", serialNoList) + ";10;1,1,1", 0);
+        return true;
+    }
     //region 私有方法
     /**
      * 验证测站中点是否已经配置

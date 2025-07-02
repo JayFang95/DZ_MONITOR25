@@ -6,6 +6,7 @@ import com.dzkj.bean.SurveyLine;
 import com.dzkj.bean.SurveyStation;
 import com.dzkj.biz.SurveyResultProcessNewClassicUpdate;
 import com.dzkj.biz.data.IPointDataXyzhBiz;
+import com.dzkj.biz.data.vo.PointDataXyzhDto;
 import com.dzkj.common.CommonUtil;
 import com.dzkj.common.enums.SocketMsgConst;
 import com.dzkj.common.util.DateUtil;
@@ -677,7 +678,8 @@ public class MultiSurveyBiz {
         backInfos.add(finalOk ? "数据后处理成功!" : "数据后处理失败!");
         Date getTime = new Date();
         if (finalOk) {
-            List<PointDataXyzh> dataXyzhs = dataXyzhBiz.saveRobotResultOnSuccess(finalResults, surveyData, true, isSurveyAtOnce(), false, new ArrayList<>(), -1);
+            PointDataXyzhDto dataDto = dataXyzhBiz.saveRobotResultOnSuccess(finalResults, surveyData, true, isSurveyAtOnce(), false, new ArrayList<>(), -1);
+            List<PointDataXyzh> dataXyzhs = dataDto.getDataList();
             PointDataXyzh dataXyzh = !dataXyzhs.isEmpty() ? dataXyzhs.get(0) : null;
             if (!dataXyzhs.isEmpty()) {
                 getTime = dataXyzh.getGetTime();

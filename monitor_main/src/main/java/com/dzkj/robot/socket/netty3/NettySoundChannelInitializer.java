@@ -1,8 +1,8 @@
-package com.dzkj.robot.socket.netty2;
+package com.dzkj.robot.socket.netty3;
 
 import com.dzkj.robot.socket.common.ChannelHandlerUtil;
-import com.dzkj.robot.socket.common.HexDecoder;
 import com.dzkj.robot.socket.common.HexEncoder;
+import com.dzkj.robot.socket.common.HexDecoder;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.socket.SocketChannel;
 
@@ -16,22 +16,25 @@ import io.netty.channel.socket.SocketChannel;
  * <author>    <time>    <version>    <desc>
  * 作者姓名     修改时间     版本号        描述
  */
-public class NettyMeteChannelInitializer extends ChannelInitializer<SocketChannel> {
+public class NettySoundChannelInitializer extends ChannelInitializer<SocketChannel> {
 
-    private final ChannelHandlerUtil handlerUtil;
+    private final ChannelHandlerUtil channelHandlerUtil;
 
-    public NettyMeteChannelInitializer(ChannelHandlerUtil handlerUtil) {
-        this.handlerUtil = handlerUtil;
+    public NettySoundChannelInitializer(ChannelHandlerUtil channelHandlerUtil) {
+        this.channelHandlerUtil = channelHandlerUtil;
     }
 
     @Override
     protected void initChannel(SocketChannel socketChannel) throws Exception {
         socketChannel.pipeline()
+                //定义分割标识
+//                .addLast(new LineBasedFrameDecoder(4 * 1024))
                 //设置编解码
                 .addLast(new HexEncoder())
                 .addLast(new HexDecoder())
                 //设置channel处理器
-                .addLast(new ServerMeteChannelHandler(handlerUtil));
+//                .addLast(new ServerIdleStateHandler())
+                .addLast(new ServerSoundChannelHandler(channelHandlerUtil));
     }
 
 }

@@ -157,4 +157,11 @@ public interface IControlBoxService extends IService<ControlBox> {
      * @return List<ControlBox>
      */
     List<ControlBox> getBindListByMissionId(Long missionId);
+
+    /**
+     * 获取任务下绑定的声光控制器集合
+     * @param missionId missionId
+     * @return List<ControlBox>
+     */
+    List<ControlBox> getSoundControlBoxList(Long missionId);
 }

@@ -1,4 +1,4 @@
-package com.dzkj.robot.socket.netty;
+package com.dzkj.robot.socket.common;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;

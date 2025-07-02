@@ -15,6 +15,7 @@ import com.dzkj.robot.multi.MultiStationAo;
 import com.dzkj.robot.multi.MultiSurveyHandler;
 import com.dzkj.robot.socket.netty.NettyServer;
 import com.dzkj.robot.socket.netty2.NettyMeteServer;
+import com.dzkj.robot.socket.netty3.NettySoundServer;
 import com.dzkj.robot.survey.MultiSurveyBiz;
 import com.dzkj.robot.survey.SurveyBiz;
 import com.dzkj.service.alarm_setting.IAlarmInfoCorrectService;
@@ -213,6 +214,7 @@ public class ControlBoxInitRunner implements CommandLineRunner {
         }
         NettyServer.initNettyServer(nettyPort);
         NettyMeteServer.initNettyServer(nettyPort + 1);
+        NettySoundServer.initNettyServer(nettyPort - 1);
     }
 
 }

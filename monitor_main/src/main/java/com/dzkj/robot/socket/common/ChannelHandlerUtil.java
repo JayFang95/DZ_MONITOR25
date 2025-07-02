@@ -18,10 +18,7 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
-import java.util.Collections;
-import java.util.Date;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
@@ -86,6 +83,30 @@ public class ChannelHandlerUtil {
                 boxAo.setOnlineTime(new Date());
                 boxAo.getSurveyBiz().currentBoxOnOffLine();
             }
+        } else {
+            //判断是报警器格式进来的注册，先判断数据长度是否正常
+            if (msg.length() == 94) {
+                String serialNo = msg.substring(6, 22);
+                // 注册时添加到在线map
+                if(!ONLINE_CHANNELS.containsKey(serialNo)){
+                    ONLINE_CHANNELS.put(serialNo, context);
+                }
+                if (redisTemplate.opsForValue().get(RedisConstant.PREFIX + serialNo) == null) {
+                    // redis 设置控制器信息
+                    redisTemplate.opsForValue().set(RedisConstant.PREFIX + serialNo, "1", ControlBoxConstant.SOCKET_REDIS_TIMEOUT_MILLIONS + 5000, TimeUnit.MILLISECONDS);
+                    // 通知页面更新
+                    try {
+                        WebSocketServer.sendInfo(new MessageVO(SocketMsgConst.CONTROL_ON.getCode(), SocketMsgConst.CONTROL_ON.getMessage(), Collections.singletonList(serialNo)));
+                    } catch (IOException e) {
+                        log.info("报警器上线通知异常：{}", e.getMessage());
+                    }
+                    // 2023/7/13 保存上线记录
+                    saveOnlineRecord(serialNo, 1);
+
+                    // 设置ControlBoxBo对象
+                    ControlBoxHandler.setControlBoxInfo(context.channel().remoteAddress().toString(), serialNo);
+                }
+            }
         }
     }
 
@@ -145,6 +166,22 @@ public class ChannelHandlerUtil {
         //消息处理
         cBox.received(msg);
     }
+
+    /**
+     * 声光报警器10秒间隔心疼
+     */
+    public void handlerSoundHeartEvent(ChannelHandlerContext context) {
+        String clientId = context.channel().remoteAddress().toString();
+        for (String key : ONLINE_CHANNELS.keySet()) {
+            if (ONLINE_CHANNELS.get(key).channel().remoteAddress().equals(context.channel().remoteAddress())){
+                ControlBoxHandler.setControlBoxInfo(clientId, key);
+                // redis 心跳保活
+                redisTemplate.opsForValue().set(RedisConstant.PREFIX + key, "1",
+                        ControlBoxConstant.SOCKET_REDIS_TIMEOUT_MILLIONS + 5000, TimeUnit.MILLISECONDS);
+                break;
+            }
+        }
+    }
     //endregion
 
 
@@ -173,7 +210,7 @@ public class ChannelHandlerUtil {
     /**
      * hex转字符串
      * @param hex hex
-     * @return
+     * @return String
      */
     public static String hex2String(String hex) {
         byte[] bytes = new byte[hex.length() / 2];
@@ -181,6 +218,58 @@ public class ChannelHandlerUtil {
             bytes[i / 2] = (byte) ((Character.digit(hex.charAt(i), 16) << 4) + Character.digit(hex.charAt(i+1), 16));
         }
         return new String(bytes);
+    }
+
+    /**
+     * @description: 发送声光报警指令
+     * @param soundCfgInfo 配置信息(serialNo1,serialNo2...;报警时间;漏测开启标识(1, 0)，漏传开启标识(1,0)，超限开启标识(1,0))
+     * @param type 类型：0-测试；1-漏测；2-漏传; 3-超限
+     */
+    public static void sendSoundAlarmCode(String soundCfgInfo, int type){
+        if (soundCfgInfo != null && !soundCfgInfo.isEmpty() && !"manual".equals(soundCfgInfo)){
+            String[] split = soundCfgInfo.split(";");
+            String[] serialNoList = split[0].split(",");
+            String[] alarmFlgList = split[2].split(",");
+            if ((type == 1 && Objects.equals(alarmFlgList[0], "0"))
+                    || (type == 2 && Objects.equals(alarmFlgList[1], "0"))
+                    || (type == 3 && Objects.equals(alarmFlgList[2], "0"))){
+                log.info("未开启 {}(1-漏测，2-漏传，3-超限) 类型声光报警", type);
+                return;
+            }
+            log.info("开始 {}(1-漏测，2-漏传，3-超限) 类型声光报警", type);
+            //发送声光报警开启指令
+            for (String serialNo : serialNoList) {
+                ChannelHandlerContext context = ONLINE_CHANNELS.get(serialNo);
+                if (context != null){
+                    try {
+                        context.writeAndFlush("0106040E0003A938").sync();
+                    } catch (InterruptedException e) {
+                        log.error("发送声光开始指令到控制器 {} 失败: {}", serialNo, e.getMessage());
+                    }
+                }
+            }
+            log.error("发送 {}(1-漏测，2-漏传，3-超限) 开启声光指令到控制器 {} 结束", type, split[0]);
+            //发送声光报警关闭指令
+            Timer timer = new Timer();
+            TimerTask task = new TimerTask() {
+                @Override
+                public void run() {
+                    for (String serialNo : serialNoList) {
+                        ChannelHandlerContext context = ONLINE_CHANNELS.get(serialNo);
+                        if (context != null){
+                            try {
+                                context.writeAndFlush("0106040E0000E939").sync();
+                            } catch (InterruptedException e) {
+                                log.error("发送声光关闭指令到控制器 {} 失败: {}", serialNo, e.getMessage());
+                            }
+                        }
+                    }
+                    log.error("发送声光停止指令到控制器 {} 结束", split[0]);
+                }
+            };
+            // 设置定时任务，延迟60000毫秒后开始，只执行一次
+            timer.schedule(task, Integer.parseInt(split[1]) * 1000L);
+        }
     }
 
 

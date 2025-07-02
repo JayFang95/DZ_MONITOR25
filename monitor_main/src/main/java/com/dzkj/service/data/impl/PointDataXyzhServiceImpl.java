@@ -10,6 +10,7 @@ import com.dzkj.mapper.data.PointDataXyzhMapper;
 import com.dzkj.service.data.IPointDataXyzhService;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -46,6 +47,9 @@ public class PointDataXyzhServiceImpl extends ServiceImpl<PointDataXyzhMapper, P
 
     @Override
     public List<PointDataXyzh> queryLatestData(List<Long> pointIds) {
+        if (pointIds == null || pointIds.isEmpty()){
+            return new ArrayList<>();
+        }
         return baseMapper.queryLatestData(pointIds);
     }
 

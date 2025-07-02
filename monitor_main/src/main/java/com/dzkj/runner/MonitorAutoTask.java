@@ -8,6 +8,7 @@ import com.dzkj.common.constant.RedisConstant;
 import com.dzkj.common.enums.SocketMsgConst;
 import com.dzkj.common.util.DateUtil;
 import com.dzkj.common.util.QwUtil;
+import com.dzkj.common.util.ThreadPoolUtil;
 import com.dzkj.common.util.TokenUtil;
 import com.dzkj.config.MessageVO;
 import com.dzkj.config.websocket.WebSocketServer;
@@ -18,6 +19,7 @@ import com.dzkj.entity.survey.RobotSurveyRecord;
 import com.dzkj.entity.system.Online;
 import com.dzkj.entity.system.User;
 import com.dzkj.entity.system.UserGroup;
+import com.dzkj.robot.QwMsgService;
 import com.dzkj.robot.box.ControlBoxAo;
 import com.dzkj.robot.box.ControlBoxBo;
 import com.dzkj.robot.box.ControlBoxHandler;
@@ -25,6 +27,7 @@ import com.dzkj.robot.socket.common.ChannelHandlerUtil;
 import com.dzkj.service.equipment.IControlBoxRecordService;
 import com.dzkj.service.project.IProMissionService;
 import com.dzkj.service.survey.IRobotSurveyRecordService;
+import com.dzkj.service.system.ICompanyService;
 import com.dzkj.service.system.IOnlineService;
 import com.dzkj.service.system.IUserGroupService;
 import com.dzkj.service.system.IUserService;
@@ -75,6 +78,10 @@ public class MonitorAutoTask {
     private QwUtil qwUtil;
     @Autowired
     private IControlBoxRecordService boxRecordService;
+    @Autowired
+    private QwMsgService qwMsgService;
+    @Autowired
+    private ICompanyService companyService;
 
     /**
      * 清理临时文件
@@ -311,6 +318,9 @@ public class MonitorAutoTask {
         if (!missionOpt.isPresent() || StringUtils.isEmpty(missionOpt.get().getNoDataAlarmGroupIdStr())){
             return;
         }
+        //2025-06-23:增加漏测漏传声光报警通知
+        ThreadPoolUtil.getPool().execute(() -> qwMsgService.doSendSoundLightCode(missionOpt.get(), record.getSerialNo(), type));
+
         if (type ==1 && !missionOpt.get().getAlarmSurvey()){
             return;
         }

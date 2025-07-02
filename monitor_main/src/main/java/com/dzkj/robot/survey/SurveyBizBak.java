@@ -5,6 +5,7 @@ import com.dzkj.bean.*;
 import com.dzkj.biz.SurveyResultProcess;
 import com.dzkj.biz.SurveyResultProcessNewClassicUpdate;
 import com.dzkj.biz.data.IPointDataXyzhBiz;
+import com.dzkj.biz.data.vo.PointDataXyzhDto;
 import com.dzkj.biz.survey.IRobotSurveyDataBiz;
 import com.dzkj.common.Angle;
 import com.dzkj.common.CommonUtil;
@@ -1873,7 +1874,8 @@ public class SurveyBizBak {
             if(finalOk){
                 List<Long> surveyCfgPointIds = new ArrayList<>();
                 this.surveyCfgPointGroup.forEach(surveyCfgPoint -> surveyCfgPoint.forEach(item -> surveyCfgPointIds.add(item.getId())));
-                List<PointDataXyzh> dataXyzhs = dataXyzhBiz.saveRobotResultOnSuccess(finalResults, surveyData, false, isSurveyAtOnce(), hasGroupSurvey, surveyCfgPointIds, surveyCfgPointGroup.size() <= 1 ? -1 : currentGroupIndex);
+                PointDataXyzhDto dataXyzhDto = dataXyzhBiz.saveRobotResultOnSuccess(finalResults, surveyData, false, isSurveyAtOnce(), hasGroupSurvey, surveyCfgPointIds, surveyCfgPointGroup.size() <= 1 ? -1 : currentGroupIndex);
+                List<PointDataXyzh> dataXyzhs = dataXyzhDto.getDataList();
                 PointDataXyzh dataXyzh = !dataXyzhs.isEmpty() ? dataXyzhs.get(0) : null;
                 if (!dataXyzhs.isEmpty()) {
                     getTime = dataXyzh.getGetTime();

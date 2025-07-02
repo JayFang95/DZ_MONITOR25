@@ -146,4 +146,15 @@ public class ControlBoxServiceImpl extends ServiceImpl<ControlBoxMapper, Control
         return baseMapper.selectList(wrapper);
     }
 
+    @Override
+    public List<ControlBox> getSoundControlBoxList(Long missionId) {
+        LambdaQueryWrapper<ControlBox> wrapper = new LambdaQueryWrapper<>();
+        wrapper.select(ControlBox::getId, ControlBox::getSerialNo, ControlBox::getName)
+                .eq(ControlBox::getMissionId, missionId)
+                .eq(ControlBox::getBindMission, true)
+                .eq(ControlBox::getDeviceType, "声光报警控制器")
+                .orderByDesc(ControlBox::getCreateTime);
+        return baseMapper.selectList(wrapper);
+    }
+
 }

@@ -175,4 +175,10 @@ public class RobotSurveyControlController {
         return ResponseUtil.success(surveyControlBiz.vibrationWireSurvey(serialNo, equipId));
     }
 
+    @RequestMapping(value = "common/surveyControl/soundLightTest", method = RequestMethod.POST)
+    @SysOperateLog(value = "声光报警器测试", type = LogConstant.UPDATE, modelName = LogConstant.EQUIP_CONTROL)
+    public ResponseUtil soundLightTest(@RequestBody List<String> serialNoList){
+        return ResponseUtil.success(surveyControlBiz.soundLightTest(serialNoList));
+    }
+
 }

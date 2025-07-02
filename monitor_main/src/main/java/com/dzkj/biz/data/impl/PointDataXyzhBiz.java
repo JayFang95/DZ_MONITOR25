@@ -7,6 +7,7 @@ import com.dzkj.bean.SurveyPoint;
 import com.dzkj.biz.alarm_setting.vo.AlarmInfoVO;
 import com.dzkj.biz.data.IPointDataXyzhBiz;
 import com.dzkj.biz.data.common.BaseDataBiz;
+import com.dzkj.biz.data.vo.PointDataXyzhDto;
 import com.dzkj.biz.data.vo.PointDataXyzhVO;
 import com.dzkj.common.util.DzBeanUtils;
 import com.dzkj.entity.alarm_setting.AlarmInfo;
@@ -191,7 +192,7 @@ public class PointDataXyzhBiz implements IPointDataXyzhBiz {
      * 原始测量数据 monitorItemId|stCfg|recycleNum|rawDatas|calDatas|adjReport
     **/
     @Override
-    public List<PointDataXyzh> saveRobotResultOnSuccess(List<String> finalResults, String surveyData, boolean hasGroup,
+    public PointDataXyzhDto saveRobotResultOnSuccess(List<String> finalResults, String surveyData, boolean hasGroup,
                                                         boolean surveyAtOnce, boolean hasGroupSurvey, List<Long> surveyCfgPointIds, int groupIndex) {
         RobotSurveyData robotSurveyData = getRobotSurveyData(surveyData, hasGroup);
         //抽取xyz成果数据
@@ -250,7 +251,7 @@ public class PointDataXyzhBiz implements IPointDataXyzhBiz {
                             PointDataXyzh::getDeltP);
             dataList = dataXyzhService.list(wrapper);
         }
-        return dataList;
+        return new PointDataXyzhDto(dataList, !alarmInfoList.isEmpty());
     }
 
     /**

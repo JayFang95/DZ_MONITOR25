@@ -117,6 +117,9 @@ public class EquipManagerBiz implements IEquipManagerBiz {
                 vo.setStationInfo(optional.get().getStationInfo());
                 vo.setSurveyStatus(optional.get().getSurveyStatus());
             }
+            if (!"全站仪控制器".equals(vo.getType())){
+                vo.setSurveyStatus("/");
+            }
         }
         return page;
     }
@@ -342,6 +345,12 @@ public class EquipManagerBiz implements IEquipManagerBiz {
             }
         }
         return list;
+    }
+
+    @Override
+    public List<ControlBoxVO> getSoundControlBoxList(Long missionId) {
+        //todo 是否需要过滤在线
+        return DzBeanUtils.listCopy(controlBoxService.getSoundControlBoxList(missionId), ControlBoxVO.class);
     }
 
     /**

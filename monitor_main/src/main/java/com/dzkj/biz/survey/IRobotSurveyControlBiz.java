@@ -287,4 +287,11 @@ public interface IRobotSurveyControlBiz {
      * @return: boolean
      **/
     boolean vibrationWireSurvey(String serialNo, Long equipId);
+
+    /**
+     * 声光报警器测试
+     * @param serialNoList serialNoList
+     * @return boolean
+     */
+    boolean soundLightTest(List<String> serialNoList);
 }

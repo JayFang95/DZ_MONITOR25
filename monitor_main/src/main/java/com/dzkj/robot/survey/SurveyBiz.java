@@ -5,6 +5,7 @@ import com.dzkj.bean.*;
 import com.dzkj.biz.SurveyResultProcess;
 import com.dzkj.biz.SurveyResultProcessNewClassicUpdate;
 import com.dzkj.biz.data.IPointDataXyzhBiz;
+import com.dzkj.biz.data.vo.PointDataXyzhDto;
 import com.dzkj.biz.survey.IRobotSurveyDataBiz;
 import com.dzkj.common.Angle;
 import com.dzkj.common.CommonUtil;
@@ -35,6 +36,7 @@ import com.dzkj.robot.box.ControlBoxHandler;
 import com.dzkj.robot.box.ControlBoxMete;
 import com.dzkj.robot.job.*;
 import com.dzkj.robot.job.common.MonitorJobUtil;
+import com.dzkj.robot.socket.common.ChannelHandlerUtil;
 import com.dzkj.service.alarm_setting.IAlarmInfoCorrectService;
 import com.dzkj.service.alarm_setting.IAlarmInfoService;
 import com.dzkj.service.data.IPointDataXyzhCorrectService;
@@ -194,6 +196,11 @@ public class SurveyBiz {
      * 气象信息字符串--"manual,温度,气压,相对湿度 | serialNo,温度,气压,相对湿度"
      */
     private String meteInfo;
+
+    /**
+     * 报警器配置信息--"manual| serialNo,serialNo;报警时间;漏测,漏测,超限"
+     */
+    private String soundAlarmCfg = "manual";
     /**
      * 数据后处理方法
      */
@@ -508,6 +515,10 @@ public class SurveyBiz {
             getSurveyGroupConfig(paramStr[6]);
             //确认有成功获取到有效的编组配置，再对编组测量配置标识赋值
             hasGroupSurvey = !this.surveyCfgPointGroup.isEmpty();
+        }
+        //报警器配置
+        if(paramStr.length == 8 && !StringUtils.isEmpty(paramStr[7])){
+            this.soundAlarmCfg = paramStr[7];
         }
     }
 
@@ -1911,7 +1922,8 @@ public class SurveyBiz {
             if(finalOk){
                 List<Long> surveyCfgPointIds = new ArrayList<>();
                 this.surveyCfgPointGroup.forEach(surveyCfgPoint -> surveyCfgPoint.forEach(item -> surveyCfgPointIds.add(item.getId())));
-                List<PointDataXyzh> dataXyzhs = dataXyzhBiz.saveRobotResultOnSuccess(finalResults, surveyData, false, isSurveyAtOnce(), hasGroupSurvey, surveyCfgPointIds, surveyCfgPointGroup.size() <= 1 ? -1 : currentGroupIndex);
+                PointDataXyzhDto dataDto = dataXyzhBiz.saveRobotResultOnSuccess(finalResults, surveyData, false, isSurveyAtOnce(), hasGroupSurvey, surveyCfgPointIds, surveyCfgPointGroup.size() <= 1 ? -1 : currentGroupIndex);
+                List<PointDataXyzh> dataXyzhs = dataDto.getDataList();
                 PointDataXyzh dataXyzh = !dataXyzhs.isEmpty() ? dataXyzhs.get(0) : null;
                 if (!dataXyzhs.isEmpty()) {
                     getTime = dataXyzh.getGetTime();
@@ -1942,6 +1954,12 @@ public class SurveyBiz {
                 // region 2024/11/26 测量成功发送结果到微信
                 qwMsgService.sendSurveyResultMsg(dataXyzhs, controlBoxAo.getMissionId(), -1);
                 // endregion 2024/11/26 测量成功发送结果到微信
+
+                //超限报警发送声光报警指令
+                if(dataDto.isHasAlarm()){
+                    ChannelHandlerUtil.sendSoundAlarmCode(this.soundAlarmCfg, 3);
+                }
+
                 if (!hasGroupSurvey || currentGroupIndex == surveyCfgPointGroup.size() - 1){
                     // region 2024/11/20 数据同步推送任务
                     pushToCorrectDb(dataXyzh);
@@ -2671,7 +2689,8 @@ public class SurveyBiz {
                     //保存本次结果
                     List<Long> surveyCfgPointIds = new ArrayList<>();
                     this.surveyCfgPointGroup.forEach(surveyCfgPoint -> surveyCfgPoint.forEach(item -> surveyCfgPointIds.add(item.getId())));
-                    List<PointDataXyzh> dataXyzhs = dataXyzhBiz.saveRobotResultOnSuccess(finalResults, surveyData, false, isSurveyAtOnce(), hasGroupSurvey, surveyCfgPointIds, currentGroupIndex);
+                    PointDataXyzhDto dataDto = dataXyzhBiz.saveRobotResultOnSuccess(finalResults, surveyData, false, isSurveyAtOnce(), hasGroupSurvey, surveyCfgPointIds, currentGroupIndex);
+                    List<PointDataXyzh> dataXyzhs = dataDto.getDataList();
 
                     // region 2025/06/20 生成漏测点信息并发送
                     String missInfo = createMissSurveyPtInfo(dataXyzhs);
@@ -2679,6 +2698,11 @@ public class SurveyBiz {
                         qwMsgService.handleSurveyFail(controlBoxAo.getMissionId(), controlBoxAo.getSerialNo(), recycleNum, missInfo);
                     }
                     // endregion 2024/06/20 生成漏测点信息并发送
+
+                    //超限报警发送声光报警指令
+                    if(dataDto.isHasAlarm()){
+                        ChannelHandlerUtil.sendSoundAlarmCode(this.soundAlarmCfg, 3);
+                    }
 
                     //输出测量反馈信息
                     if (!surveyBackInfos.isEmpty()) {

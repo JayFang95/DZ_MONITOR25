@@ -144,4 +144,11 @@ public interface IEquipManagerBiz {
      * @return List<ControlBoxVO>
      */
     List<ControlBoxVO> getListApp(Long missionId);
+
+    /**
+     * 查询任务绑定声光报警器列表
+     * @param missionId missionId
+     * @return List<ControlBoxVO>
+     */
+    List<ControlBoxVO> getSoundControlBoxList(Long missionId);
 }

@@ -6,19 +6,24 @@ import com.dzkj.biz.vo.AppMsgVO;
 import com.dzkj.biz.vo.TextVO;
 import com.dzkj.common.util.DateUtil;
 import com.dzkj.common.util.QwUtil;
+import com.dzkj.common.util.ThreadPoolUtil;
 import com.dzkj.entity.data.PointDataXyzh;
 import com.dzkj.entity.data.PushTask;
 import com.dzkj.entity.param_set.Point;
 import com.dzkj.entity.project.ProMission;
 import com.dzkj.entity.project.Project;
+import com.dzkj.entity.survey.RobotSurveyControl;
 import com.dzkj.entity.survey.RobotSurveyRecord;
 import com.dzkj.entity.system.User;
 import com.dzkj.entity.system.UserGroup;
+import com.dzkj.robot.socket.common.ChannelHandlerUtil;
 import com.dzkj.service.data.IPushTaskService;
 import com.dzkj.service.param_set.IPointService;
 import com.dzkj.service.project.IProMissionService;
 import com.dzkj.service.project.IProjectService;
+import com.dzkj.service.survey.IRobotSurveyControlService;
 import com.dzkj.service.survey.IRobotSurveyRecordService;
+import com.dzkj.service.system.ICompanyService;
 import com.dzkj.service.system.IUserGroupService;
 import com.dzkj.service.system.IUserService;
 import lombok.extern.slf4j.Slf4j;
@@ -62,6 +67,10 @@ public class QwMsgService {
     protected IPointService pointService;
     @Autowired
     private QwUtil qwUtil;
+    @Autowired
+    private IRobotSurveyControlService surveyControlService;
+    @Autowired
+    private ICompanyService companyService;
 
     public void sendSurveyProcessMsg(String msg, Long missionId){
         try {
@@ -352,6 +361,10 @@ public class QwMsgService {
      * @param missInfo type 1-漏测:漏测点信息
      */
     public void sendSurveyOrUploadFailNotify(ProMission mission, String serialNo, int type, String missInfo){
+        ThreadPoolUtil.getPool().execute(() -> {
+            doSendSoundLightCode(mission, serialNo, type);
+            log.info("{}_{}_{}声光报警指令发送完成", mission.getName(), serialNo, type==1?"漏测":"漏传");
+        });
         if (type == 1 && !mission.getAlarmSurvey()){
             log.info("未开启漏测报警推送");
             return;
@@ -386,6 +399,28 @@ public class QwMsgService {
         //发送应用信息
         log.info("发送漏传漏测提示信息: {}", sb);
         qwUtil.sendAppTextMsg(msgVO);
+    }
+
+    /**
+     * 执行漏测漏传声光报警
+     * @param mission mission
+     * @param serialNo serialNo
+     * @param type 1-漏测； 2-漏传
+     */
+    public void doSendSoundLightCode(ProMission mission, String serialNo, int type) {
+        //获取声光报警配置
+        LambdaQueryWrapper<RobotSurveyControl> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(RobotSurveyControl::getMissionId, mission.getId())
+                .eq(RobotSurveyControl::getSerialNo, serialNo);
+        List<RobotSurveyControl> list = surveyControlService.list(queryWrapper);
+        if (list.isEmpty()){
+            return;
+        }
+        String[] split = list.get(0).getParams().split("\\|");
+        if (split.length == 8) {
+            log.info("{}_{}开始发送漏测漏传声光报警信息", mission.getName(), serialNo);
+            ChannelHandlerUtil.sendSoundAlarmCode(split[7], type);
+        }
     }
 
     private List<User> getUserList(List<UserGroup> userGroupList) {
