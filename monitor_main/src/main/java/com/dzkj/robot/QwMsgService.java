@@ -5,7 +5,7 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.dzkj.biz.vo.AppMsgVO;
 import com.dzkj.biz.vo.TextVO;
 import com.dzkj.common.util.DateUtil;
-import com.dzkj.common.util.HySmsUtilCopy;
+import com.dzkj.common.util.HySmsUtil;
 import com.dzkj.common.util.QwUtil;
 import com.dzkj.common.util.ThreadPoolUtil;
 import com.dzkj.entity.data.PointDataXyzh;
@@ -399,7 +399,7 @@ public class QwMsgService {
                     if (type == 1){
                         content += "|" + smsMap.get("miss_pt");
                     }
-                    HySmsUtilCopy.sendAlarmMsg(user.getPhone(), type + 1, content);
+                    HySmsUtil.sendAlarmMsg(user.getPhone(), type + 1, content);
 //                    SmsUtil.sendAlarmMsg(smsMap, user.getPhone(), type + 1);
                 }
             }

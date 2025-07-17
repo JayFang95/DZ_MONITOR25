@@ -2771,7 +2771,7 @@ public class DataBizImpl implements IDataBiz {
                     String content = map.get("project") + "|" + map.get("mission") + "|" + map.get("point")
                             + "|" + map.get("time") + "|" + map.get("alarm_item") + "|" + map.get("value")
                             + "|" + map.get("over_level") + "|" + map.get("limit_value");
-                    HySmsUtilCopy.sendAlarmMsg(user.getPhone(), 1, content);
+                    HySmsUtil.sendAlarmMsg(user.getPhone(), 1, content);
                     // 发送信息
 //                    SmsUtil.sendAlarmMsg(map, user.getPhone(), 1);
                 });
