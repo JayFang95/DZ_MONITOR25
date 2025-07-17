@@ -344,7 +344,7 @@ public class MonitorAutoTask {
                     if (type == 1){
                         content += "|" + smsMap.get("limit_value");
                     }
-                    HySmsUtil.sendAlarmMsg(user.getPhone(), type + 1, content);
+                    HySmsUtilCopy.sendAlarmMsg(user.getPhone(), type + 1, content);
 //                    SmsUtil.sendAlarmMsg(smsMap, user.getPhone(), type + 1);
                 }
             }

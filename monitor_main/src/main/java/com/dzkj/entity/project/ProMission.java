@@ -177,12 +177,16 @@ public class ProMission implements Serializable {
     private Boolean enableRule;
 
     /**
-     * 漏测报警开启
+     * 漏测报警开启_短信
      */
     private Boolean alarmSurveySms;
     /**
-     * 漏传报警开启
+     * 漏传报警开启_短信
      */
     private Boolean alarmPushSms;
+    /**
+     * 超限信息开启_短信
+     */
+    private Boolean overLimitSms;
 
 }

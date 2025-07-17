@@ -24,6 +24,7 @@ import com.dzkj.entity.project.ProMission;
 import com.dzkj.entity.project.Project;
 import com.dzkj.entity.survey.RobotSurveyControl;
 import com.dzkj.entity.survey.RobotSurveyData;
+import com.dzkj.entity.system.Company;
 import com.dzkj.entity.system.Groups;
 import com.dzkj.entity.system.MonitorType;
 import com.dzkj.entity.system.User;
@@ -41,6 +42,7 @@ import com.dzkj.service.project.IProMissionService;
 import com.dzkj.service.project.IProjectService;
 import com.dzkj.service.survey.IRobotSurveyControlService;
 import com.dzkj.service.survey.IRobotSurveyDataService;
+import com.dzkj.service.system.ICompanyService;
 import com.dzkj.service.system.IGroupService;
 import com.dzkj.service.system.IMonitorTypeService;
 import com.dzkj.service.system.IUserService;
@@ -117,6 +119,8 @@ public class DataBizImpl implements IDataBiz {
     private IGroupService groupService;
     @Autowired
     private IUserService userService;
+    @Autowired
+    private ICompanyService companyService;
     @Autowired
     private IProjectService projectService;
     @Autowired
@@ -2702,7 +2706,7 @@ public class DataBizImpl implements IDataBiz {
         groups.addAll(groupService.listByIds(receiveIds));
         // 获取编组包含人员信息
         List<Long> groupIds = groups.stream().map(Groups::getId).collect(Collectors.toList());
-        if (groupIds.size() > 0){
+        if (!groupIds.isEmpty()){
             users.addAll(userService.listByGroupIds(groupIds));
         }
     }
@@ -2713,6 +2717,7 @@ public class DataBizImpl implements IDataBiz {
     private void sentAlarmMsg(PtGroup ptGroup, List<AlarmInfoVO> list, List<AlarmDistribute> distributes, List<User> users, List<Project> projects, List<ProMission> missions, List<MonitorType> monitorTypes) {
         String[] splitReceive = ptGroup.getAlarmReceiveIds().split(",");
         String[] splitDistribute = ptGroup.getAlarmDistributeIds().split(",");
+        Company company = companyService.getById(users.get(0).getCompanyId());
         for (int i = 0; i < splitReceive.length; i++) {
             String receive = splitReceive[i];
             List<User> userList = users.stream().filter(item -> (item.getGroupId() + "").equals(receive)).collect(Collectors.toList());
@@ -2726,7 +2731,12 @@ public class DataBizImpl implements IDataBiz {
             String smsAlarmLevel = alarmDistribute.getSmsAlarmLevel();
             // 发送短信报警
             if (StringUtils.isNotEmpty(smsAlarmLevel)){
-                sendSmsMsg(smsAlarmLevel, list, userList, projects, missions, monitorTypes);
+                //判断是否开通了短信业务
+                if (company != null && company.getEnableSms()) {
+                    sendSmsMsg(smsAlarmLevel, list, userList, projects, missions, monitorTypes);
+                } else {
+                    log.info("公司未开通短信业务");
+                }
             }
             String wxAlarmLevel = alarmDistribute.getWxAlarmLevel();
             // 发送微信报警: 0419 确认使用企业微信应用消息发送报警
@@ -2761,7 +2771,7 @@ public class DataBizImpl implements IDataBiz {
                     String content = map.get("project") + "|" + map.get("mission") + "|" + map.get("point")
                             + "|" + map.get("time") + "|" + map.get("alarm_item") + "|" + map.get("value")
                             + "|" + map.get("over_level") + "|" + map.get("limit_value");
-                    HySmsUtil.sendAlarmMsg(user.getPhone(), 1, content);
+                    HySmsUtilCopy.sendAlarmMsg(user.getPhone(), 1, content);
                     // 发送信息
 //                    SmsUtil.sendAlarmMsg(map, user.getPhone(), 1);
                 });
