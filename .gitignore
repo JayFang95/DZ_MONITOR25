@@ -27,3 +27,4 @@ resources/
 
 #安全文件
 SmsUtil.java
+HySmsUtil.java
