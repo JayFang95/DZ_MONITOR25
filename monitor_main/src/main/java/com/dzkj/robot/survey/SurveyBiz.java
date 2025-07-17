@@ -2276,7 +2276,7 @@ public class SurveyBiz {
         PushJobParam param = new PushJobParam();
         Date current = new Date();
         //获取延时推送时长
-        int delayUploadTime = pushTask.getDelayUploadTime() > 3 ? pushTask.getDelayUploadTime() : 3;
+        int delayUploadTime = pushTask.getDelayUploadTime() > 1 ? pushTask.getDelayUploadTime() : 1;
         param.setFirstTime(new Date(current.getTime() + delayUploadTime * 60000L));
         param.setFirstTimeCorn(MonitorJobUtil.getCronString(param.getFirstTime()));
         param.setStartDate(current);
@@ -2290,7 +2290,7 @@ public class SurveyBiz {
                 MonitorPushJob.class, param);
         log.info("{}定时任务设置成功:{}", controlBoxAo.getSerialNo(), param.getFirstTime());
         // 2024/11/26 生成漏测漏传记录
-        Date uploadTime = new Date(getTime.getTime() + (delayUploadTime + 2) * 60000L);
+        Date uploadTime = new Date(getTime.getTime() + (delayUploadTime + 1) * 60000L);
         saveRobotSurveyRecord(recycleNum, uploadTime);
         // 2023/6/19 更新测量记录表,比上真实传时间晚两分钟
         return uploadTime;

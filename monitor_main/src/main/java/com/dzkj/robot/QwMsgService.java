@@ -333,7 +333,7 @@ public class QwMsgService {
             uploadFinish = 1;
         }
         //设置最小延迟时间
-        int delayTime = task == null ? 5 :  task.getDelayUploadTime() >= 5 ? task.getDelayUploadTime() : 5;
+        int delayTime = task == null ? 1 :  task.getDelayUploadTime() >= 1 ? task.getDelayUploadTime() : 1;
         RobotSurveyRecord record = new RobotSurveyRecord();
         record.setMissionId(missionId);
         record.setMissionName(mission != null ? mission.getName() : "null");
