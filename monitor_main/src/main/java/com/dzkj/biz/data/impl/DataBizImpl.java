@@ -2723,11 +2723,11 @@ public class DataBizImpl implements IDataBiz {
                 continue;
             }
             AlarmDistribute alarmDistribute = optional.get();
-//            String smsAlarmLevel = alarmDistribute.getSmsAlarmLevel();
+            String smsAlarmLevel = alarmDistribute.getSmsAlarmLevel();
             // 发送短信报警
-//            if (StringUtils.isNotEmpty(smsAlarmLevel)){
-//                sendSmsMsg(smsAlarmLevel, list, userList, projects, missions, monitorTypes);
-//            }
+            if (StringUtils.isNotEmpty(smsAlarmLevel)){
+                sendSmsMsg(smsAlarmLevel, list, userList, projects, missions, monitorTypes);
+            }
             String wxAlarmLevel = alarmDistribute.getWxAlarmLevel();
             // 发送微信报警: 0419 确认使用企业微信应用消息发送报警
             if (StringUtils.isNotEmpty(wxAlarmLevel)){
@@ -2757,8 +2757,13 @@ public class DataBizImpl implements IDataBiz {
                 ProMission proMission = mission.orElse(null);
                 createAlarmContent(infoVO, 1, proMission, monitorTypes, map);
                 users.forEach(user -> {
+                    // 发送信息变量顺序: project mission point time alarm_item value over_level limit_value
+                    String content = map.get("project") + "|" + map.get("mission") + "|" + map.get("point")
+                            + "|" + map.get("time") + "|" + map.get("alarm_item") + "|" + map.get("value")
+                            + "|" + map.get("over_level") + "|" + map.get("limit_value");
+                    HySmsUtil.sendAlarmMsg(user.getPhone(), 1, content);
                     // 发送信息
-                    SmsUtil.sendAlarmMsg(map, user.getPhone());
+//                    SmsUtil.sendAlarmMsg(map, user.getPhone(), 1);
                 });
             }
         }
@@ -2771,7 +2776,7 @@ public class DataBizImpl implements IDataBiz {
     private String createAlarmContent(AlarmInfoVO infoVO, int type, ProMission mission, List<MonitorType> monitorTypes, Map<String, String> map) {
         StringBuilder sb = new StringBuilder();
         String[] originInfo = infoVO.getAlarmOrigin().split(",").length == 3 ? infoVO.getAlarmOrigin().split(",") : new String[]{"", "", ""};
-        String alarmLevel = getAlarmLevelString(infoVO.getAlarmLevel());
+        String[] alarmLevel = getAlarmLevelString(infoVO.getAlarmLevel());
         // 类型， 测量值单位， 变化量单位， 变化速率单位
         String[] valueKey = {"", "", "", ""};
         double value = 0.0 ; double deltValue = 0.0;double TotalValue = 0.0; double vDeltValue = 0.0;
@@ -2795,7 +2800,7 @@ public class DataBizImpl implements IDataBiz {
                             .eq(PointDataZ::getRecycleNum, infoVO.getRecycleNum()).eq(PointDataZ::getPid, infoVO.getPtId())
                             .orderByDesc(PointDataZ::getGetTime);
                     List<PointDataZ> dataZList = pointDataZService.list(wrapper);
-                    if (dataZList.size() > 0){
+                    if (!dataZList.isEmpty()){
                        value = dataZList.get(0).getZ();
                        deltValue = dataZList.get(0).getDeltZ();
                        TotalValue = dataZList.get(0).getTotalZ();
@@ -2809,19 +2814,18 @@ public class DataBizImpl implements IDataBiz {
         // 报警等级：${alarmLevel}本次值${value}变化量${deltValue}累计变化量${totalValue}变化速率${vDeltValue}；
         // 报警时间：${time}] 请及时处理！
         if (type == 1){
-            map.put("point",originInfo[0]);
-            map.put("alarmItem",originInfo[2]);
-            map.put("alarmLevel",alarmLevel + "; " + valueKey[0]);
-            map.put("value",valueKey[1] + ": " + String.format("%.4f", infoVO.getVal() != null ? infoVO.getVal() : value) + "; " + valueKey[0]);
-            map.put("deltValue",valueKey[2] + ": " + String.format("%.2f", infoVO.getVal() != null ? infoVO.getVal() : deltValue) + "; " + valueKey[0]);
-            map.put("totalValue",valueKey[2] + ": " + String.format("%.2f", infoVO.getVal() != null ? infoVO.getVal() : TotalValue) + "; " + valueKey[0]);
-            map.put("vDeltValue",valueKey[3] + ": " + String.format("%.2f", infoVO.getVal() != null ? infoVO.getVal() : vDeltValue) );
-            map.put("time",dateFormat.format(infoVO.getAlarmTime()));
+            map.put("point", originInfo[0]);
+            map.put("time", dateFormat.format(infoVO.getAlarmTime()));
+            map.put("alarm_item", valueKey[0] + getAlarmTypeString(originInfo[2]));
+            map.put("value", getAlarmValueString(getAlarmTypeString(originInfo[2]), valueKey, infoVO, value, deltValue, vDeltValue, TotalValue));
+            map.put("over_level", alarmLevel[1]);
+            String thresholdStr = infoVO.getAbs() ? infoVO.getThreshold() + "(绝对值)" : infoVO.getThreshold();
+            map.put("limit_value", thresholdStr);
         }
         if (type == 2){
             sb.append("测点名: ").append(originInfo[0]).append("\r\n")
                     .append("报警项: ").append(originInfo[2]).append("\r\n")
-                    .append("报警等级: ").append(alarmLevel).append("\r\n")
+                    .append("报警等级: ").append(alarmLevel[0]).append("\r\n")
                     .append(valueKey[0]).append("本次值").append(valueKey[1]).append(": ").append(String.format("%.4f", infoVO.getVal() != null ? infoVO.getVal() : value)).append("\r\n")
                     .append(valueKey[0]).append("变化量").append(valueKey[2]).append(": ").append(String.format("%.2f", infoVO.getVal() != null ? infoVO.getVal() : deltValue)).append("\r\n")
                     .append(valueKey[0]).append("累计变化量").append(valueKey[2]).append(": ").append(String.format("%.2f", infoVO.getVal() != null ? infoVO.getVal() : TotalValue)).append("\r\n")
@@ -2831,7 +2835,7 @@ public class DataBizImpl implements IDataBiz {
         if (type == 3){
             map.put("point", "测点名: " + originInfo[0]);
             map.put("alarmItem", "报警项: " + originInfo[2]);
-            map.put("alarmLevel", "报警等级：" + alarmLevel);
+            map.put("alarmLevel", "报警等级：" + alarmLevel[0]);
             String thresholdStr = infoVO.getAbs() ? infoVO.getThreshold() + "(绝对值)" : infoVO.getThreshold();
             map.put("threshold", "报警阈值：" + thresholdStr);
             map.put("value", valueKey[0] + "本次值" + valueKey[1] + ": " + String.format("%.4f", infoVO.getVal() != null ? infoVO.getVal() : value));
@@ -2909,16 +2913,54 @@ public class DataBizImpl implements IDataBiz {
     /**
      * 报警等级装换
      */
-    private String getAlarmLevelString(String alarmLevel) {
+    private String[] getAlarmLevelString(String alarmLevel) {
         switch (alarmLevel){
             case "1":
-                return "超预警值";
+                return new String[]{"超预警值", "预警"};
             case "2":
-                return "超报警值";
+                return new String[]{"超报警值", "报警"};
             case "3":
-                return "超控制值";
+                return new String[]{"超控制值", "控制"};
             default:
-                return "未知等级";
+                return new String[]{"未知等级", "未知"};
+        }
+    }
+
+    /**
+     * 报警等级类型
+     */
+    private String getAlarmTypeString(String alarmType) {
+        switch (alarmType){
+            case "单次变化量":
+                return "单次";
+            case "累计变化量":
+                return "累计";
+            case "日变化速率":
+                return "日速率";
+            case "测量值":
+                return "测量值";
+            default:
+                return "未知";
+        }
+    }
+
+    /**
+     * 获取报警值+单位
+     */
+    private String getAlarmValueString(String alarmType, String[] valueKey, AlarmInfoVO infoVO,
+                                       double val, double dVal, double vdVal, double tVal) {
+        // 类型， 测量值单位， 变化量单位， 变化速率单位
+        switch (alarmType){
+            case "单次":
+                return String.format("%.2f", infoVO.getVal() != null ? infoVO.getVal() : dVal) + valueKey[2];
+            case "累计":
+                return String.format("%.2f", infoVO.getVal() != null ? infoVO.getVal() : tVal) + valueKey[2];
+            case "日速率":
+                return String.format("%.2f", infoVO.getVal() != null ? infoVO.getVal() : vdVal) + valueKey[3];
+            case "测量值":
+                return String.format("%.4f", infoVO.getVal() != null ? infoVO.getVal() : val) + valueKey[1];
+            default:
+                return String.format("%.2f", infoVO.getVal() != null ? infoVO.getVal() : 0.0) + "mm";
         }
     }
 
@@ -3011,7 +3053,7 @@ public class DataBizImpl implements IDataBiz {
                         sb.append("\r\n");
                     }
                     sb.append(map.get("point")).append("\r\n");
-                    sb.append(map.get("alarmItem")).append("(").append(getAlarmLevelString(infoVO.getAlarmLevel())).append(")\r\n");
+                    sb.append(map.get("alarmItem")).append("(").append(getAlarmLevelString(infoVO.getAlarmLevel())[0]).append(")\r\n");
                     if (map.get("alarmItem").contains("测量值")){
                         sb.append(map.get("value")).append("\r\n");
                     }

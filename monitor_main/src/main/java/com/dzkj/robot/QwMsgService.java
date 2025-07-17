@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.dzkj.biz.vo.AppMsgVO;
 import com.dzkj.biz.vo.TextVO;
 import com.dzkj.common.util.DateUtil;
+import com.dzkj.common.util.HySmsUtil;
 import com.dzkj.common.util.QwUtil;
 import com.dzkj.common.util.ThreadPoolUtil;
 import com.dzkj.entity.data.PointDataXyzh;
@@ -14,6 +15,7 @@ import com.dzkj.entity.project.ProMission;
 import com.dzkj.entity.project.Project;
 import com.dzkj.entity.survey.RobotSurveyControl;
 import com.dzkj.entity.survey.RobotSurveyRecord;
+import com.dzkj.entity.system.Company;
 import com.dzkj.entity.system.User;
 import com.dzkj.entity.system.UserGroup;
 import com.dzkj.robot.socket.common.ChannelHandlerUtil;
@@ -31,10 +33,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Date;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -365,20 +364,54 @@ public class QwMsgService {
             doSendSoundLightCode(mission, serialNo, type);
             log.info("{}_{}_{}声光报警指令发送完成", mission.getName(), serialNo, type==1?"漏测":"漏传");
         });
-        if (type == 1 && !mission.getAlarmSurvey()){
-            log.info("未开启漏测报警推送");
-            return;
-        }
-        if (type == 2 && !mission.getAlarmPush()){
-            log.info("未开启漏传报警推送");
-            return;
-        }
+
         List<UserGroup> userGroupList = getUserGroupList(mission);
         if (userGroupList.isEmpty()) {
             return;
         }
         List<User> users = getUserList(userGroupList);
         if (users.isEmpty()) {
+            return;
+        }
+        //2025-06-24：漏测漏传短信通知
+        ThreadPoolUtil.getPool().execute(() -> {
+            //判断是否开通了短信业务
+            Company company = companyService.getById(users.get(0).getCompanyId());
+            if (company == null || !company.getEnableSms()) {
+                log.info("短信通知发送失败：未开通短信业务");
+                return;
+            }
+            //短信报警通知
+            if (type == 1 && !mission.getAlarmSurveySms()){
+                log.info("未开启短信漏测报警推送");
+                return;
+            }
+            if (type == 2 && !mission.getAlarmPushSms()){
+                log.info("未开启短信漏传报警推送");
+                return;
+            }
+            Map<String, String> smsMap = createSmsValueMap(mission, serialNo, type, missInfo);
+            for (User user : users) {
+                if (StringUtils.isNotEmpty(user.getPhone())) {
+                    // 发送信息变量顺序: mission serial_no time miss_pt
+                    String content = smsMap.get("mission") + "|" + smsMap.get("serial_no")
+                            + "|" + smsMap.get("time");
+                    if (type == 1){
+                        content += "|" + smsMap.get("miss_pt");
+                    }
+                    HySmsUtil.sendAlarmMsg(user.getPhone(), type + 1, content);
+//                    SmsUtil.sendAlarmMsg(smsMap, user.getPhone(), type + 1);
+                }
+            }
+        });
+
+        //微信报警通知
+        if (type == 1 && !mission.getAlarmSurvey()){
+            log.info("未开启漏测报警推送");
+            return;
+        }
+        if (type == 2 && !mission.getAlarmPush()){
+            log.info("未开启漏传报警推送");
             return;
         }
         String useridStr = users.stream().map(User::getAppId)
@@ -421,6 +454,24 @@ public class QwMsgService {
             log.info("{}_{}开始发送漏测漏传声光报警信息", mission.getName(), serialNo);
             ChannelHandlerUtil.sendSoundAlarmCode(split[7], type);
         }
+    }
+
+    /**
+     * 构造漏测漏传短信参数集合
+     漏测模板：
+     ${mission}监测任务${serial_no}编号控制器在${time}时发现漏测点[${miss_pt}]。请及时处理。
+     漏传模版：
+     ${mission}监测任务${serial_no}编号控制器在${time}时监测到未自动上传数据。请及时处理。
+     */
+    public Map<String, String> createSmsValueMap(ProMission mission, String serialNo, int type, String missInfo) {
+        Map<String, String> map = new HashMap<>();
+        map.put("mission", mission.getName());
+        map.put("serial_no", serialNo);
+        map.put("time", DateUtil.dateToDateString(new Date()));
+        if(type == 1){
+            map.put("miss_pt", missInfo);
+        }
+        return map;
     }
 
     private List<User> getUserList(List<UserGroup> userGroupList) {

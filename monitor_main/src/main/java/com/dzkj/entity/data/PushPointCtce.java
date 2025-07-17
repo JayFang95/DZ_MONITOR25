@@ -1,6 +1,7 @@
 package com.dzkj.entity.data;
 
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import lombok.Data;
 
@@ -12,13 +13,13 @@ import java.util.Date;
  *
  * @author jing.fang
  * @date 2025/7/9
- * @description 成都推送点表
+ * @description 四局推送点表
  * history
  * <author>    <time>    <version>    <desc>
  * 作者姓名     修改时间     版本号        描述
  */
 @Data
-public class PushPointCd implements Serializable {
+public class PushPointCtce implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
@@ -40,15 +41,10 @@ public class PushPointCd implements Serializable {
      */
     private Long pointId;
 
-    /**
-     * 关联成都局测点id
-     */
-    private Long pointIdCd;
-
-    /**
-     * 关联成都局测点项目id
-     */
-    private Long projectIdCd;
+    @TableField(exist = false)
+    private String pointName;
+    @TableField(exist = false)
+    private String pointType;
 
     /**
      * 监测点报警处理方法

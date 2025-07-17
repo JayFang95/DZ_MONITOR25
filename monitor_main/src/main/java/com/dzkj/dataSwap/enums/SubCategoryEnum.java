@@ -17,8 +17,8 @@ public enum SubCategoryEnum {
     QD("桥墩", 2),
     LJ("路基", 3),
     SD_JG("隧道结构", 4),
-    KJQ("框架桥", 5),
-    LZ("立柱 ", 6),
+    KJQ("框架桥涵", 5),
+    LZ("立柱", 6),
     JK("基坑 ", 7),
     DQ_QD("挡墙墙顶 ", 8),
     HD("涵洞 ", 9),
@@ -30,6 +30,9 @@ public enum SubCategoryEnum {
     JG_LF("结构裂缝 ", 15),
     GG("钢轨 ", 16),
     GD_JH_CC("轨道几何尺寸 ", 17),
+    BL_ZD("便梁支墩 ", 18),
+    YS_BP("岩石边坡 ", 20),
+    DT("电塔 ", 22),
     OTHER("其他", 99);
 
     private String name;

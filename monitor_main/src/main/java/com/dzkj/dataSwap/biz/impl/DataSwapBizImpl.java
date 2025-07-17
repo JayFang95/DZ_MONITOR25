@@ -80,7 +80,7 @@ public class DataSwapBizImpl implements IDataSwapBiz {
 
     @Override
     public ResponseUtil uploadPoint(List<PushPointVO> pointList) {
-        if (pointList == null || pointList.size() == 0){
+        if (pointList == null || pointList.isEmpty()){
             return ResponseUtil.failure(500, "无任何可更新测点");
         }
         PushTask pushTask = pushTaskService.getByCode(pointList.get(0).getProjectCode());
@@ -179,6 +179,12 @@ public class DataSwapBizImpl implements IDataSwapBiz {
         String result = "未执行数据推送";
         if (thirdPartType == 1) {
             result = monitorPushJob.doExecute(missionId, serialNoStr.toString(), recycleNum);
+        }
+        if (thirdPartType == 2) {
+            result = monitorPushJob.doExecuteJn(missionId, serialNoStr.toString(), recycleNum);
+        }
+        if (thirdPartType == 3) {
+            result = monitorPushJob.doExecuteCtce(missionId, serialNoStr.toString(), recycleNum);
         }
         if (StringUtils.isNotEmpty(result) && !result.contains("duplicate data")){
             log.info("手动上传监测数据出现错误: {}",result);

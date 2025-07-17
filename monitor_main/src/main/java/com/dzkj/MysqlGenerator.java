@@ -35,7 +35,7 @@ public class MysqlGenerator {
         gc.setAuthor("jing.fang");
         // 代码的java的绝对路径, (是否可以使用相对路径?)
         //
-        gc.setOutputDir("E:\\Workspace\\Code\\DZ\\Back\\DZ_MONITOR23\\monitor_main\\src\\main\\java");
+        gc.setOutputDir("E:\\Workspace\\Code\\DZ\\Back\\DZ_MONITOR25\\monitor_main\\src\\main\\java");
 
         gc.setFileOverride(true);
         gc.setActiveRecord(false);
@@ -63,7 +63,7 @@ public class MysqlGenerator {
         strategy.setEntityLombokModel(true);
         strategy.setRestControllerStyle(true);
         // 需要生成的表
-        strategy.setInclude("push_point_cd", "push_task_cd");
+        strategy.setInclude("push_point_ctce");
         mpg.setStrategy(strategy);
 
         // 包配置

@@ -1,5 +1,6 @@
 package com.dzkj.dataSwap.vo;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 
 import java.util.Date;
@@ -22,12 +23,18 @@ public class MonitorDataVO {
     private Double x;
     private Double totalX;
     private Double deltX;
+    @JsonProperty("vDeltX")
+    private Double vDeltX;
     private Double y;
     private Double totalY;
     private Double deltY;
+    @JsonProperty("vDeltY")
+    private Double vDeltY;
     private Double z;
     private Double totalZ;
     private Double deltZ;
+    @JsonProperty("vDeltZ")
+    private Double vDeltZ;
     private Boolean overLimit;
     private Date getTime;
 

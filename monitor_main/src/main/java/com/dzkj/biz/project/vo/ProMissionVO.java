@@ -172,4 +172,13 @@ public class ProMissionVO {
      */
     private Boolean enableRule;
 
+    /**
+     * 漏测报警开启
+     */
+    private Boolean alarmSurveySms;
+    /**
+     * 漏传报警开启
+     */
+    private Boolean alarmPushSms;
+
 }

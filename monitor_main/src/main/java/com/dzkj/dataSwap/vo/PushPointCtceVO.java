@@ -1,28 +1,22 @@
-package com.dzkj.entity.data;
+package com.dzkj.dataSwap.vo;
 
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableId;
 import lombok.Data;
 
-import java.io.Serializable;
 import java.util.Date;
 
 /**
  * Copyright(c),2018-2023,合肥市鼎足空间技术有限公司
  *
  * @author jing.fang
- * @date 2025/7/9
- * @description 成都推送点表
+ * @date 2025/3/9
+ * @description 推送测点VO-中铁四局
  * history
  * <author>    <time>    <version>    <desc>
  * 作者姓名     修改时间     版本号        描述
  */
 @Data
-public class PushPointCd implements Serializable {
+public class PushPointCtceVO {
 
-    private static final long serialVersionUID = 1L;
-
-    @TableId(value = "id", type = IdType.AUTO)
     private Long id;
 
     /**
@@ -39,16 +33,8 @@ public class PushPointCd implements Serializable {
      * 关联测点id
      */
     private Long pointId;
-
-    /**
-     * 关联成都局测点id
-     */
-    private Long pointIdCd;
-
-    /**
-     * 关联成都局测点项目id
-     */
-    private Long projectIdCd;
+    private String pointName;
+    private String pointType;
 
     /**
      * 监测点报警处理方法

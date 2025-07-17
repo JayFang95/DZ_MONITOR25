@@ -6,16 +6,14 @@ import com.dzkj.biz.vo.AppMsgVO;
 import com.dzkj.biz.vo.TextVO;
 import com.dzkj.common.constant.RedisConstant;
 import com.dzkj.common.enums.SocketMsgConst;
-import com.dzkj.common.util.DateUtil;
-import com.dzkj.common.util.QwUtil;
-import com.dzkj.common.util.ThreadPoolUtil;
-import com.dzkj.common.util.TokenUtil;
+import com.dzkj.common.util.*;
 import com.dzkj.config.MessageVO;
 import com.dzkj.config.websocket.WebSocketServer;
 import com.dzkj.constant.ControlBoxConstant;
 import com.dzkj.entity.equipment.ControlBoxRecord;
 import com.dzkj.entity.project.ProMission;
 import com.dzkj.entity.survey.RobotSurveyRecord;
+import com.dzkj.entity.system.Company;
 import com.dzkj.entity.system.Online;
 import com.dzkj.entity.system.User;
 import com.dzkj.entity.system.UserGroup;
@@ -321,10 +319,44 @@ public class MonitorAutoTask {
         //2025-06-23:增加漏测漏传声光报警通知
         ThreadPoolUtil.getPool().execute(() -> qwMsgService.doSendSoundLightCode(missionOpt.get(), record.getSerialNo(), type));
 
+        //2025-07-17:增加漏测漏传短信报警通知
+        ThreadPoolUtil.getPool().execute(() -> {
+            //判断是否开通了短信业务
+            Company company = companyService.getById(users.get(0).getCompanyId());
+            if (company == null || !company.getEnableSms()) {
+                log.info("短信报警发送失败：未开通短信业务");
+                return;
+            }
+            if (type == 1 && !missionOpt.get().getAlarmSurveySms()){
+                log.info("未开启短信漏测报警推送");
+                return;
+            }
+            if (type == 2 && !missionOpt.get().getAlarmPushSms()){
+                log.info("未开启短信漏传报警推送");
+                return;
+            }
+            Map<String, String> smsMap = qwMsgService.createSmsValueMap(missionOpt.get(), record.getSerialNo(), type, "全部漏测");
+            for (User user : users) {
+                if (StringUtils.isNotEmpty(user.getPhone())) {
+                    // 发送信息变量顺序: mission serial_no time miss_pt
+                    String content = smsMap.get("mission") + "|" + smsMap.get("serial_no")
+                            + "|" + smsMap.get("time");
+                    if (type == 1){
+                        content += "|" + smsMap.get("limit_value");
+                    }
+                    HySmsUtil.sendAlarmMsg(user.getPhone(), type + 1, content);
+//                    SmsUtil.sendAlarmMsg(smsMap, user.getPhone(), type + 1);
+                }
+            }
+        });
+
+        //2025-06-24:增加漏测漏传微信报警通知
         if (type ==1 && !missionOpt.get().getAlarmSurvey()){
+            log.info("未开启漏测报警推送");
             return;
         }
         if (type ==2 && !missionOpt.get().getAlarmPush()){
+            log.info("未开启漏传报警推送");
             return;
         }
         String groupIdStr = missionOpt.get().getNoDataAlarmGroupIdStr();
@@ -349,6 +381,10 @@ public class MonitorAutoTask {
         //发送应用信息
         log.info("发送漏传漏测提示信息: {}", sb);
         qwUtil.sendAppTextMsg(msgVO);
+        //2025-06-24：漏测漏传短信通知
+        if (users.isEmpty()) {
+            return;
+        }
     }
 
     private List<User> getUserList(List<UserGroup> userGroups) {
@@ -366,7 +402,7 @@ public class MonitorAutoTask {
                 groupIds.add(Long.parseLong(s));
             }
         }
-        if (groupIds.size() == 0){
+        if (groupIds.isEmpty()){
             return new ArrayList<>();
         }
         LambdaUpdateWrapper<UserGroup> wrapper = new LambdaUpdateWrapper<>();

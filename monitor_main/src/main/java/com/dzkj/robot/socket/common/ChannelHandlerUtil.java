@@ -90,6 +90,11 @@ public class ChannelHandlerUtil {
                 // 注册时添加到在线map
                 if(!ONLINE_CHANNELS.containsKey(serialNo)){
                     ONLINE_CHANNELS.put(serialNo, context);
+                    try {
+                        context.writeAndFlush("0106040E0000E939").sync();
+                    } catch (InterruptedException e) {
+                        log.error("连接发送声光关闭指令到控制器 {} 失败: {}", serialNo, e.getMessage());
+                    }
                 }
                 if (redisTemplate.opsForValue().get(RedisConstant.PREFIX + serialNo) == null) {
                     // redis 设置控制器信息
@@ -252,8 +257,10 @@ public class ChannelHandlerUtil {
             //发送声光报警关闭指令
             Timer timer = new Timer();
             TimerTask task = new TimerTask() {
+                private int count = 0;
                 @Override
                 public void run() {
+                    count++;
                     for (String serialNo : serialNoList) {
                         ChannelHandlerContext context = ONLINE_CHANNELS.get(serialNo);
                         if (context != null){
@@ -265,10 +272,13 @@ public class ChannelHandlerUtil {
                         }
                     }
                     log.error("发送声光停止指令到控制器 {} 结束", split[0]);
+                    if (count == 2) {
+                        timer.cancel(); // 任务执行两次后取消定时器
+                    }
                 }
             };
             // 设置定时任务，延迟60000毫秒后开始，只执行一次
-            timer.schedule(task, Integer.parseInt(split[1]) * 1000L);
+            timer.schedule(task, Integer.parseInt(split[1]) * 1000L, 60 * 1000L);
         }
     }
 

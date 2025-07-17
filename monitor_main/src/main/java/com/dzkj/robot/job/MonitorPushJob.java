@@ -8,6 +8,7 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.dzkj.common.constant.RedisConstant;
 import com.dzkj.common.util.DateUtil;
 import com.dzkj.dataSwap.bean.DataSwapResponse;
+import com.dzkj.dataSwap.bean.ctce_api.*;
 import com.dzkj.dataSwap.bean.data_upload.PointData;
 import com.dzkj.dataSwap.bean.data_upload.ResultJn;
 import com.dzkj.dataSwap.bean.data_upload.TotalStationData;
@@ -22,11 +23,13 @@ import com.dzkj.dataSwap.utils.MonitorDataUtil;
 import com.dzkj.dataSwap.utils.RsaUtil;
 import com.dzkj.entity.data.*;
 import com.dzkj.entity.project.ProMission;
+import com.dzkj.entity.project.Project;
 import com.dzkj.entity.survey.RobotSurveyData;
 import com.dzkj.entity.survey.RobotSurveyRecord;
 import com.dzkj.robot.QwMsgService;
 import com.dzkj.service.data.*;
 import com.dzkj.service.project.IProMissionService;
+import com.dzkj.service.project.IProjectService;
 import com.dzkj.service.survey.IRobotSurveyDataService;
 import com.dzkj.service.survey.IRobotSurveyRecordService;
 import lombok.extern.slf4j.Slf4j;
@@ -44,10 +47,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
@@ -70,6 +70,8 @@ public class MonitorPushJob implements Job {
     @Autowired
     private IPushPointJnService pushPointJnService;
     @Autowired
+    private IPushPointCtceService pushPointCtceService;
+    @Autowired
     private IPointDataXyzhService pointDataXyzhService;
     @Autowired
     private IRobotSurveyDataService surveyDataService;
@@ -87,6 +89,8 @@ public class MonitorPushJob implements Job {
     private IRobotSurveyRecordService recordService;
     @Autowired
     private IProMissionService missionService;
+    @Autowired
+    private IProjectService projectService;
     @Autowired
     private RedisTemplate<String, Object> redisTemplate;
     @Autowired
@@ -107,6 +111,9 @@ public class MonitorPushJob implements Job {
         }
         if (thirdPartType == 2) {
             result = doExecuteJn(missionId, serialNo, recycleNum);
+        }
+        if (thirdPartType == 3) {
+            result = doExecuteCtce(missionId, serialNo, recycleNum);
         }
         if (StringUtils.isNotEmpty(result) && !result.contains("duplicate data")){
             log.info("{} 数据上传异常：{}", serialNo, result);
@@ -171,7 +178,7 @@ public class MonitorPushJob implements Job {
             removePushJob(serialNoStr, recycleNum);
             return "推送任务信息不存在";
         }
-        TotalStationData stationData = creatJnPushData(latestMonitorDataList, pushTask);
+        TotalStationData stationData = creatJnPushData(pushPointList, latestMonitorDataList, pushTask);
         if(stationData == null){
             return "推送数据对象创建失败";
         }
@@ -220,19 +227,56 @@ public class MonitorPushJob implements Job {
 
     /**
      * 构造推送数据对象
+     *
+     * @param pushPointList
      * @param latestMonitorDataList latestMonitorDataList
      * @param pushTask              pushTask
-     * @return                      TotalStationData
+     * @return TotalStationData
      */
-    private TotalStationData creatJnPushData(List<PointDataXyzh> latestMonitorDataList, PushTask pushTask) {
+    private TotalStationData creatJnPushData(List<PushPointJn> pushPointList, List<PointDataXyzh> latestMonitorDataList, PushTask pushTask) {
         try {
+            //过滤有效数据
+            List<PointDataXyzh> latestMonitorDataListFilter = new ArrayList<>();
+            for (PushPointJn pushPoint : pushPointList) {
+                //本次是否采集到推送点数据
+                Optional<PointDataXyzh> optional = latestMonitorDataList.stream()
+                        .filter(item -> item.getPid().equals(pushPoint.getPointId())).findAny();
+                if (optional.isPresent()){
+                    //本次采集到的推送点是否超限
+                    PointDataXyzh data = optional.get();
+                    if (data.getOverLimit()){
+                        switch (pushPoint.getAlarmHandler()){
+                            case 2:
+                                //上传本次数据
+                                break;
+                            case 3:
+                                //上传上传未报警数据
+                                data = pointDataXyzhService.getLastNoAlarmData(pushPoint.getPointId());
+                                break;
+                            case 1:
+                                //不上传
+                            default:
+                                data = null;
+                                break;
+                        }
+                    }
+                    //数据存在时判断可以推送
+                    if(data != null) {
+                        latestMonitorDataListFilter.add(data);
+                    }
+                }
+            }
+            if (latestMonitorDataListFilter.isEmpty()) {
+                return null;
+            }
+
             TotalStationData stationData = new TotalStationData();
             stationData.setKey(pushTask.getKey());
             stationData.setSecondkey(pushTask.getSecondkey());
             stationData.setMeastime(DateUtil.dateToDateString(latestMonitorDataList.get(0).getGetTime(), DateUtil.yyyy_MM_dd_HH_mm_ss_EN));
             stationData.setSignature(Md5Util.encode(stationData.getKey() + stationData.getSecondkey() + stationData.getMeastime()));
             List<PointData> list = new ArrayList<>();
-            for (PointDataXyzh dataXyzh : latestMonitorDataList) {
+            for (PointDataXyzh dataXyzh : latestMonitorDataListFilter) {
                 PointData pointData = new PointData();
                 pointData.setPointcode(dataXyzh.getName());
                 pointData.setX(dataXyzh.getX());
@@ -241,9 +285,156 @@ public class MonitorPushJob implements Job {
                 list.add(pointData);
             }
             stationData.setDatalist(list);
+            log.info("创建济南局推送数据对象成功: {}", JSON.toJSONString(stationData));
             return stationData;
         } catch (Exception e) {
             log.info("济南局监测数据构造失败: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * 执行推送工作-济南局
+     * @param missionId missionId
+     * @param serialNoStr serialNoStr
+     * @param recycleNum recycleNum
+     */
+    public String doExecuteCtce(Long missionId, String serialNoStr, int recycleNum) {
+        log.info("开始进行中铁四局监测数据推送: {}_{}...", serialNoStr, recycleNum);
+        //获取推送点列表
+
+        List<PushPointCtce> pushPointList = pushPointCtceService.queryByMissionId(missionId);
+        List<Long> pushPintIds = pushPointList.stream().map(PushPointCtce::getPointId).collect(Collectors.toList());
+        //获取当前任务最新一期采集数据
+        List<PointDataXyzh> latestMonitorDataList = pointDataXyzhService.queryLatestData(pushPintIds);
+        latestMonitorDataList = latestMonitorDataList.stream().filter(data -> data.getRecycleNum() >= recycleNum).collect(Collectors.toList());
+        if (latestMonitorDataList.isEmpty()){
+            return "无任何有效数据可推送,请检查数据是否正确";
+        }
+        //获取推送任务信息
+        LambdaQueryWrapper<PushTask> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(PushTask::getMissionId, missionId);
+        PushTask pushTask = pushTaskService.getOne(wrapper);
+        if (pushTask == null) {
+            removePushJob(serialNoStr, recycleNum);
+            return "推送任务信息不存在";
+        }
+        ApiDataDto apiData = creatCtcePushData(pushPointList, latestMonitorDataList, pushTask);
+        if(apiData == null){
+            return "推送数据对象创建失败";
+        }
+        StringBuilder sb = new StringBuilder();
+        pushCtceData(apiData, sb, pushTask);
+        //推送失败重试5次，每次间隔10秒
+        AtomicInteger repeatTime = new AtomicInteger(0);
+        while (StringUtils.isNotEmpty(sb.toString()) && repeatTime.get() < 5){
+            log.info("中铁四准备第{}次重试:{}", repeatTime.get() + 1, sb);
+            sb.setLength(0);
+            try {
+                Thread.sleep(10 * 1000);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+            pushCtceData(apiData, sb, pushTask);
+            repeatTime.getAndIncrement();
+        }
+        log.info("中铁四局监测数据推送结束: {}_{}", serialNoStr, recycleNum);
+        return null;
+    }
+
+    private void pushCtceData(ApiDataDto apiData, StringBuilder sb, PushTask pushTask) {
+        try {
+            ResponseEntity<ResultCtce> response = restTemplate.exchange(pushTask.getStdUrl(), HttpMethod.POST, new HttpEntity<>(apiData), ResultCtce.class);
+            if (response.getBody() == null) {
+                sb.append("中铁四局监测数据推送返回结果为空");
+                log.info("中铁四局监测数据推送返回结果为空");
+                return;
+            }
+            if (!Objects.equals(response.getBody().getResultCode(), "200")) {
+                sb.append("中铁四局监测数据推送失败: ").append(response.getBody().getMessage());
+                log.info("中铁四局监测数据推送失败: {}", response.getBody().getMessage());
+            }
+            log.info("中铁四局监测数据推送结果: {}", response.getBody().getMessage());
+        } catch (RestClientException e) {
+            log.info("中铁四局监测数据推送异常: {}", e.getMessage());
+            sb.append(e.getMessage());
+        }
+    }
+
+    private ApiDataDto creatCtcePushData(List<PushPointCtce> pushPointList, List<PointDataXyzh> latestMonitorDataList, PushTask pushTask) {
+        try {
+            //过滤有效数据
+            List<PointDataXyzh> latestMonitorDataListFilter = new ArrayList<>();
+            for (PushPointCtce pushPoint : pushPointList) {
+                //本次是否采集到推送点数据
+                Optional<PointDataXyzh> optional = latestMonitorDataList.stream()
+                        .filter(item -> item.getPid().equals(pushPoint.getPointId())).findAny();
+                if (optional.isPresent()){
+                    //本次采集到的推送点是否超限
+                    PointDataXyzh data = optional.get();
+                    if (data.getOverLimit()){
+                        switch (pushPoint.getAlarmHandler()){
+                            case 2:
+                                //上传本次数据
+                                break;
+                            case 3:
+                                //上传上传未报警数据
+                                data = pointDataXyzhService.getLastNoAlarmData(pushPoint.getPointId());
+                                break;
+                            case 1:
+                                //不上传
+                            default:
+                                data = null;
+                                break;
+                        }
+                    }
+                    //数据存在时判断可以推送
+                    if(data != null) {
+                        latestMonitorDataListFilter.add(data);
+                    }
+                }
+            }
+            if (latestMonitorDataListFilter.isEmpty()) {
+                return null;
+            }
+
+            ProMission mission = missionService.getById(pushTask.getMissionId());
+            Project project = null;
+            String lng = null;//经度
+            String lat = null;//纬度
+            if (mission != null) {
+                project = projectService.getById(mission.getProjectId());
+                lng = project.getLng();
+                lat = project.getLat();
+            }
+            ApiDataDto apiData = new ApiDataDto();
+            DataStr dataStr = new DataStr();
+            List<DataList> list = new ArrayList<>();
+            for (PointDataXyzh dataXyzh : latestMonitorDataListFilter) {
+                DataList dataList = new DataList();
+                MeasureData data = new MeasureData();
+                data.setMONITORCODE(dataXyzh.getName());
+                data.setDATAH(String.format("%.2f", dataXyzh.getZ()));
+                data.setGXDATA(String.format("%.2f", dataXyzh.getX()));
+                data.setGYDATA(String.format("%.2f", dataXyzh.getY()));
+                data.setDELTAX(String.format("%.2f", dataXyzh.getTotalX()));
+                data.setDELTAY(String.format("%.2f", dataXyzh.getTotalY()));
+                data.setDELTAH(String.format("%.2f", dataXyzh.getTotalZ()));
+                data.setDATAXSPEED(String.format("%.2f", dataXyzh.getVDeltX()));
+                data.setDATAYSPEED(String.format("%.2f", dataXyzh.getVDeltY()));
+                data.setDATAHSPEED(String.format("%.2f", dataXyzh.getVDeltZ()));
+                data.setLONGITUDE(lng);
+                data.setLATITUDE(lat);
+                data.setSTATISTICSDATE(DateUtil.dateToDateString(dataXyzh.getCreateTime()));
+                dataList.setDATA(data);
+                list.add(dataList);
+            }
+            dataStr.setLIST(list);
+            apiData.setDataStr(dataStr);
+            log.info("创建中铁四局推送数据对象成功: {}", JSON.toJSONString(apiData));
+            return apiData;
+        } catch (Exception e) {
+            log.error("创建中铁四局推送数据对象失败:{}", e.getMessage());
             return null;
         }
     }
@@ -411,8 +602,7 @@ public class MonitorPushJob implements Job {
             doPushMonitorData(monitorData, sb, pushTask);
             log.info("{} 监测数据上报结束", projectCode);
         } catch (Exception e) {
-            e.printStackTrace();
-            log.error("监测数据上报异常: {}", e.getMessage());
+            log.error("上海局监测数据上报异常: {}", e.getMessage());
             sb.append("监测数据上报异常: ").append(e.getMessage()).append("\r\n");
         }
     }

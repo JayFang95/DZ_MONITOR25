@@ -213,14 +213,14 @@ public class DataPtBizImpl implements IDataPtBiz {
         if (isXyz == null) {
             return ResponseUtil.success();
         }
-        if (updateList != null && updateList.size() > 0) {
+        if (updateList != null && !updateList.isEmpty()) {
             if (isXyz) {
                 pointDataXyzhService.updateBatchById(DzBeanUtils.listCopy(updateList, PointDataXyzh.class));
             } else {
                 pointDataZService.updateBatchById(DzBeanUtils.listCopy(updateList, PointDataZ.class));
             }
         }
-        if (deleteIds != null && deleteIds.size() > 0) {
+        if (deleteIds != null && !deleteIds.isEmpty()) {
             if (isXyz) {
                 pointDataXyzhService.removeByIds(deleteIds);
             } else {
@@ -269,7 +269,7 @@ public class DataPtBizImpl implements IDataPtBiz {
             wrapper.eq(PointDataXyzh::getPid, calculate.getPid()).eq(PointDataXyzh::getStop, false)
                     .orderByAsc(PointDataXyzh::getGetTime);
             List<PointDataXyzh> list = pointDataXyzhService.list(wrapper);
-            if(list.size() == 0) {
+            if(list.isEmpty()) {
                 return;
             }
             List<Point> points = pointService.queryByMissionId(mission==null ? 0 : mission.getId());

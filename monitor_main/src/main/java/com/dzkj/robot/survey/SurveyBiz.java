@@ -150,7 +150,7 @@ public class SurveyBiz {
     /**
      * 当前测量期数
      **/
-    private int recycleNum;
+    private int recycleNum = 1;
     /**
      * 是否是正镜测量--用于测量期间状态信息显示
      **/
@@ -459,6 +459,8 @@ public class SurveyBiz {
         multiStation = -1 != controlBoxAo.getGroupId();
         //预测量标识初始为True,只要有一点预测不成功，则置为False,中断测量
         preSurveyOk = true;
+        //获得测量周期数
+        recycleNum = surveyDataBiz.getLastRecycleNumByMissionId(controlBoxAo.getMissionId()) + 1;
         if (isMultiStation()) {
             initDataMultiStation();
         }else {

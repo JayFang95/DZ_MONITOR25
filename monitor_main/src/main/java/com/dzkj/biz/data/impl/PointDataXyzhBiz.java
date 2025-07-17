@@ -25,6 +25,7 @@ import com.dzkj.service.data.IPointDataXyzhService;
 import com.dzkj.service.param_set.IPointService;
 import com.dzkj.service.project.IProMissionService;
 import com.dzkj.service.survey.IRobotSurveyDataService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -43,6 +44,7 @@ import java.util.stream.Collectors;
  * 作者姓名     修改时间     版本号        描述
  */
 @Service
+@Slf4j
 public class PointDataXyzhBiz implements IPointDataXyzhBiz {
 
     @Autowired
@@ -397,10 +399,11 @@ public class PointDataXyzhBiz implements IPointDataXyzhBiz {
         List<PointDataXyzh> list = dataXyzhService.list(wrapper);
         List<Point> points = pointService.listByIds(pidList);
         ProMission mission = missionService.findById(surveyData.getMissionId());
+        Integer recycleNum = surveyData.getRecycleNum();
         for (String finalResult : finalResults) {
             String[] split = finalResult.split(",");
             PointDataXyzh data = getPointDataXyzh(split);
-            data.setRecycleNum(surveyData.getRecycleNum());
+            data.setRecycleNum(recycleNum);
             List<PointDataXyzh> collect = list.stream().filter(it -> it.getPid().equals(data.getPid()))
                     .collect(Collectors.toList());
             PointDataXyzh lastData  = !collect.isEmpty() ? collect.get(0) : null;
@@ -413,7 +416,7 @@ public class PointDataXyzhBiz implements IPointDataXyzhBiz {
                 BaseDataBiz.setNewData(dataVO, lastData, mission, points, true);
             }
             // 赋值测量周期
-            dataVO.setRecycleNum(surveyData.getRecycleNum());
+            dataVO.setRecycleNum(recycleNum);
             // 验证测点是否超限，记录报警信息
             List<AlarmItem> alarmItems = alarmItemService.getByPid(data.getPid());
             List<AlarmItem> items = alarmItems.stream().filter(item -> item.getMonitorType().equals(mission.getTypeName()))
@@ -427,6 +430,7 @@ public class PointDataXyzhBiz implements IPointDataXyzhBiz {
             BaseDataBiz.checkValueOverXyz(dataVO, items, "日变化速率", atomicInteger, sb, infoList);
             BaseDataBiz.checkValueOverXyz(dataVO, items, "测量值", atomicInteger, sb, infoList);
             BaseDataBiz.checkValueOverXyz2(dataVO, items, nameList, atomicInteger, sb, infoList);
+            dataVO.setRecycleNum(recycleNum);
             if(atomicInteger.get() > 0){
                 dataVO.setOverLimit(true);
                 dataVO.setOverLimitInfo(sb.substring(0, sb.toString().length()-1));
@@ -541,10 +545,12 @@ public class PointDataXyzhBiz implements IPointDataXyzhBiz {
             }
             // endregion: 2024/11/22 判断任务是否启用推送规则 ：开启根据报警阈值修正测量数据
             dataList.add(DzBeanUtils.propertiesCopy(dataVO, PointDataXyzh.class));
-            // 2023/5/30 统一入库观测时间
-            for (PointDataXyzh dataXyzh : dataList) {
-                dataXyzh.setGetTime(dataList.get(0).getGetTime());
-            }
+        }
+        // 2023/5/30 统一入库观测时间
+        for (PointDataXyzh dataXyzh : dataList) {
+            dataXyzh.setGetTime(dataList.get(0).getGetTime());
+            dataXyzh.setRecycleNum(recycleNum);
+            log.info("测量结果信息:{}-{}", dataXyzh.getName(), dataXyzh.getRecycleNum());
         }
     }
 
@@ -613,7 +619,7 @@ public class PointDataXyzhBiz implements IPointDataXyzhBiz {
     private void doCorrectData(PointDataXyzhVO dataVO, PointDataXyzh lastData, List<String> allAlarmName, ProMission mission) {
         /*
          * 修正逻辑
-         * x超限: 上次累计变化量变化0.1mm,正负取值和累计变化量相反
+         * x超限: 上次累计变化量变化0.5-1mm,正负取值和累计变化量相反
          * y超限: 上次累计变化量变化0.5-1mm,正负取值和累计变化量相反
          * z超限: 上次累计变化量变化0-1mm,正负取值和累计变化量相反
          * p超限: x, y 同时上面变化 (取消修正，上海局平台不传了 24.11.29)
@@ -633,7 +639,7 @@ public class PointDataXyzhBiz implements IPointDataXyzhBiz {
     private void correctX(PointDataXyzhVO dataVO, PointDataXyzh lastData, double ratio) {
         Double x = lastData.getX();
         Double totalX = lastData.getTotalX();
-        double changeX = new Random().nextDouble() * 0.1;
+        double changeX = new Random().nextDouble() * 0.5 + 0.5;
         double deltX = totalX > 0 ? -changeX : changeX;
         System.out.println("X修正前数据:" + dataVO.getX() + "---" + dataVO.getDeltX() + "---" + dataVO.getTotalX());
         dataVO.setTotalX(totalX + deltX);

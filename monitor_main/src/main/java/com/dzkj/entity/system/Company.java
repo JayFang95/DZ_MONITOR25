@@ -82,4 +82,9 @@ public class Company implements Serializable {
 
     private String functionConfig;
 
+    /**
+     * 开通短信业务
+     */
+    private Boolean enableSms;
+
 }

@@ -13,8 +13,8 @@ package com.dzkj.dataSwap.enums;
 public enum MainCategoryEnum {
 
     //接口枚举
-    XS_TARGET("线上目标 ", 1),
-    XX_TARGET("线下目标 ", 2),
+    XS_TARGET("线上目标", 1),
+    XX_TARGET("线下目标", 2),
     OTHER("其他", 99);
 
     private String name;

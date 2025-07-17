@@ -102,16 +102,15 @@ public class MultiRobotSurveyJob implements Job {
             LambdaQueryWrapper<PushTask> wrapper = new LambdaQueryWrapper<>();
             wrapper.eq(PushTask::getMissionId, surveyRecord.getMissionId());
             List<PushTask> list = pushTaskService.list(wrapper);
-            int delayTime = list.size() > 0 ? list.get(0).getDelayUploadTime() : delayUploadTime;
+            int delayTime = !list.isEmpty() ? list.get(0).getDelayUploadTime() : delayUploadTime;
             Date date = new Date();
             surveyRecord.setSurveyAlarmTime(new Date(date.getTime() + 20 * 60000));
             surveyRecord.setUploadAlarmTime(new Date(date.getTime() + delayTime * 60000L));
             surveyRecord.setSurveyFinish(0);
-            surveyRecord.setUploadFinish(list.size() > 0 ? list.get(0).getStatus()==1 ? 0 : 1 : 1);
+            surveyRecord.setUploadFinish(!list.isEmpty() ? list.get(0).getStatus()==1 ? 0 : 1 : 1);
             recordService.save(surveyRecord);
             log.info("控制器 {} 测量漏测漏传记录保存成功", serialNo);
         } catch (Exception e) {
-            e.printStackTrace();
             log.info("控制器 {} 测量漏测漏传记录保存异常: {}" , serialNo, e.getMessage());
         }
     }
@@ -142,7 +141,6 @@ public class MultiRobotSurveyJob implements Job {
         calendar.setTime(currentDate);
         Date nextDate = null;
         LocalTime selectTime;
-        // TODO: 2025/1/18 待修改完善 
         //循环比较第一个时间点后时间点，选择下一个可执行时间值
         for (int i = 4; i < split.length; i++) {
             selectTime = LocalTime.parse(split[i], DateTimeFormatter.ofPattern(DateUtil.HH_mm_ss_EN));
@@ -165,7 +163,7 @@ public class MultiRobotSurveyJob implements Job {
             // 2023/6/26 记录状态
             //执行本次采集任务
             MultiStationAo multiStation = MultiSurveyHandler.getStation(multiStationId);
-            if (multiStation != null && multiStation.getMultiSurveyBiz().getControlBoxList().size() > 0) {
+            if (multiStation != null && !multiStation.getMultiSurveyBiz().getControlBoxList().isEmpty()) {
                 for (ControlBoxAo controlBox : multiStation.getMultiSurveyBiz().getControlBoxList()) {
                     controlBoxService.updateSurvey(controlBox.getId(), 0);
                 }

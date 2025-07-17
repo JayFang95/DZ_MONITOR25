@@ -4,6 +4,7 @@ import com.dzkj.common.util.DzBeanUtils;
 import com.dzkj.common.util.ResponseUtil;
 import com.dzkj.dataSwap.biz.IPushTaskBiz;
 import com.dzkj.dataSwap.vo.PushTaskVO;
+import com.dzkj.service.data.IPushPointCtceService;
 import com.dzkj.service.data.IPushPointJnService;
 import com.dzkj.service.data.IPushPointService;
 import com.dzkj.service.data.IPushTaskService;
@@ -31,6 +32,8 @@ public class PushTaskBizImpl implements IPushTaskBiz {
     private IPushPointService pushPointService;
     @Autowired
     private IPushPointJnService pushPointJnService;
+    @Autowired
+    private IPushPointCtceService pushPointCtceService;
 
     @Override
     public List<PushTaskVO> queryList(Long companyId) {
@@ -69,6 +72,7 @@ public class PushTaskBizImpl implements IPushTaskBiz {
         if (b){
             pushPointService.removeByTaskId(id);
             pushPointJnService.removeByTaskId(id);
+            pushPointCtceService.removeByTaskId(id);
         }
         return b ? ResponseUtil.success() : ResponseUtil.failure(500, "任务推送删除失败");
     }

@@ -192,6 +192,13 @@ public class DataOtherBizImpl implements IDataOtherBiz {
         }
         LambdaQueryWrapper<RobotSurveyData> wrapper = new LambdaQueryWrapper<>();
         wrapper.in(RobotSurveyData::getMissionId, cond.getMissionIds());
+        if (cond.getDeleteTime()!=null && cond.getDeleteTime().size() == 2){
+            wrapper.ge(RobotSurveyData::getCreateTime, cond.getDeleteTime().get(0))
+                    .le(RobotSurveyData::getCreateTime, cond.getDeleteTime().get(1));
+
+        }else {
+            wrapper.le(RobotSurveyData::getCreateTime, new Date());
+        }
         robotSurveyDataService.remove(wrapper);
         List<Point> points = pointService.queryByMissionIds(cond.getMissionIds());
         List<Long> pidList = points.stream().map(Point::getId).collect(Collectors.toList());

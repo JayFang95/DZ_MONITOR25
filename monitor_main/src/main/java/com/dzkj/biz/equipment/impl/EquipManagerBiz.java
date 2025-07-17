@@ -146,24 +146,26 @@ public class EquipManagerBiz implements IEquipManagerBiz {
                 boxAo.setProjectName(project == null ? "" : project.getName());
             }
             ControlBoxHandler.addControlBoxAo(boxAo);
-            //给控制器AO绑定业务类
-            SurveyBiz surveyBiz = new SurveyBiz(boxAo,
-                    dataXyzhBiz,
-                    surveyDataBiz,
-                    surveyJobService,
-                    pushTaskService,
-                    recordService,
-                    controlBoxService,
-                    surveyCycleService,
-                    surveyControlService,
-                    surveyControlGroupService,
-                    pushTaskOtherService,
-                    dataXyzhService,
-                    dataXyzhCorrectService,
-                    infoService,
-                    infoCorrectService,
-                    qwMsgService);
-            boxAo.setSurveyBiz(surveyBiz);
+            if (!"声光报警控制器".equals(box.getType())){
+                //给控制器AO绑定业务类
+                SurveyBiz surveyBiz = new SurveyBiz(boxAo,
+                        dataXyzhBiz,
+                        surveyDataBiz,
+                        surveyJobService,
+                        pushTaskService,
+                        recordService,
+                        controlBoxService,
+                        surveyCycleService,
+                        surveyControlService,
+                        surveyControlGroupService,
+                        pushTaskOtherService,
+                        dataXyzhService,
+                        dataXyzhCorrectService,
+                        infoService,
+                        infoCorrectService,
+                        qwMsgService);
+                boxAo.setSurveyBiz(surveyBiz);
+            }
         }
         return b ? ResponseUtil.success() : ResponseUtil.failure(ResponseEnum.SAVE_ERROR);
     }
