@@ -512,7 +512,7 @@ public class SurveyBiz {
         //获取数据后处理方法
         processMethod = Integer.parseInt(paramStr[5]);
         //是否配置了编组
-        hasGroupSurvey = paramStr.length == 7 && StringUtils.isNotEmpty(paramStr[6]) && !"False".equals(paramStr[6]);
+        hasGroupSurvey = paramStr.length >=7 && StringUtils.isNotEmpty(paramStr[6]) && !"False".equals(paramStr[6]);
         if (hasGroupSurvey) {
             getSurveyGroupConfig(paramStr[6]);
             //确认有成功获取到有效的编组配置，再对编组测量配置标识赋值

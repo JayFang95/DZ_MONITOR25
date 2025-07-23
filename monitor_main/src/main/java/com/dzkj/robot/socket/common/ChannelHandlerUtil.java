@@ -67,7 +67,7 @@ public class ChannelHandlerUtil {
             try {
                 WebSocketServer.sendInfo(new MessageVO(SocketMsgConst.CONTROL_ON.getCode(), SocketMsgConst.CONTROL_ON.getMessage(), Collections.singletonList(infos[2])));
             } catch (IOException e) {
-                e.printStackTrace();
+                log.error("页面通知信息发送异常：{}", e.getMessage(), e);
             }
             // 2023/7/13 保存上线记录
             saveOnlineRecord(serialNo, 1);
@@ -90,10 +90,14 @@ public class ChannelHandlerUtil {
                 // 注册时添加到在线map
                 if(!ONLINE_CHANNELS.containsKey(serialNo)){
                     ONLINE_CHANNELS.put(serialNo, context);
-                    try {
-                        context.writeAndFlush("0106040E0000E939").sync();
-                    } catch (InterruptedException e) {
-                        log.error("连接发送声光关闭指令到控制器 {} 失败: {}", serialNo, e.getMessage());
+                } else {
+                    ChannelHandlerContext contextExit = ONLINE_CHANNELS.get(serialNo);
+                    if (!contextExit.channel().remoteAddress().toString().equals(context.channel().remoteAddress().toString())) {
+                        if (contextExit.channel().isActive()) {
+                            contextExit.channel().close();
+                            contextExit.close();
+                        }
+                        ONLINE_CHANNELS.put(serialNo, context);
                     }
                 }
                 if (redisTemplate.opsForValue().get(RedisConstant.PREFIX + serialNo) == null) {
@@ -231,54 +235,58 @@ public class ChannelHandlerUtil {
      * @param type 类型：0-测试；1-漏测；2-漏传; 3-超限
      */
     public static void sendSoundAlarmCode(String soundCfgInfo, int type){
-        if (soundCfgInfo != null && !soundCfgInfo.isEmpty() && !"manual".equals(soundCfgInfo)){
-            String[] split = soundCfgInfo.split(";");
-            String[] serialNoList = split[0].split(",");
-            String[] alarmFlgList = split[2].split(",");
-            if ((type == 1 && Objects.equals(alarmFlgList[0], "0"))
-                    || (type == 2 && Objects.equals(alarmFlgList[1], "0"))
-                    || (type == 3 && Objects.equals(alarmFlgList[2], "0"))){
-                log.info("未开启 {}(1-漏测，2-漏传，3-超限) 类型声光报警", type);
-                return;
-            }
-            log.info("开始 {}(1-漏测，2-漏传，3-超限) 类型声光报警", type);
-            //发送声光报警开启指令
-            for (String serialNo : serialNoList) {
-                ChannelHandlerContext context = ONLINE_CHANNELS.get(serialNo);
-                if (context != null){
-                    try {
-                        context.writeAndFlush("0106040E0003A938").sync();
-                    } catch (InterruptedException e) {
-                        log.error("发送声光开始指令到控制器 {} 失败: {}", serialNo, e.getMessage());
-                    }
+        try {
+            if (soundCfgInfo != null && !soundCfgInfo.isEmpty() && !"manual".equals(soundCfgInfo)){
+                String[] split = soundCfgInfo.split(";");
+                String[] serialNoList = split[0].split(",");
+                String[] alarmFlgList = split[2].split(",");
+                if ((type == 1 && Objects.equals(alarmFlgList[0], "0"))
+                        || (type == 2 && Objects.equals(alarmFlgList[1], "0"))
+                        || (type == 3 && Objects.equals(alarmFlgList[2], "0"))){
+                    log.info("未开启 {}(1-漏测，2-漏传，3-超限) 类型声光报警", type);
+                    return;
                 }
-            }
-            log.error("发送 {}(1-漏测，2-漏传，3-超限) 开启声光指令到控制器 {} 结束", type, split[0]);
-            //发送声光报警关闭指令
-            Timer timer = new Timer();
-            TimerTask task = new TimerTask() {
-                private int count = 0;
-                @Override
-                public void run() {
-                    count++;
-                    for (String serialNo : serialNoList) {
-                        ChannelHandlerContext context = ONLINE_CHANNELS.get(serialNo);
-                        if (context != null){
-                            try {
-                                context.writeAndFlush("0106040E0000E939").sync();
-                            } catch (InterruptedException e) {
-                                log.error("发送声光关闭指令到控制器 {} 失败: {}", serialNo, e.getMessage());
-                            }
+                log.info("开始 {}(1-漏测，2-漏传，3-超限) 类型声光报警", type);
+                //发送声光报警开启指令
+                for (String serialNo : serialNoList) {
+                    ChannelHandlerContext context = ONLINE_CHANNELS.get(serialNo);
+                    if (context != null){
+                        try {
+                            context.writeAndFlush("0106040E0003A938").sync();
+                        } catch (InterruptedException e) {
+                            log.error("发送声光开始指令到控制器 {} 失败: {}", serialNo, e.getMessage());
                         }
                     }
-                    log.error("发送声光停止指令到控制器 {} 结束", split[0]);
-                    if (count == 2) {
-                        timer.cancel(); // 任务执行两次后取消定时器
-                    }
                 }
-            };
-            // 设置定时任务，延迟60000毫秒后开始，只执行一次
-            timer.schedule(task, Integer.parseInt(split[1]) * 1000L, 60 * 1000L);
+                log.error("发送 {}(1-漏测，2-漏传，3-超限) 开启声光指令到控制器 {} 结束", type, split[0]);
+                //发送声光报警关闭指令
+                Timer timer = new Timer();
+                TimerTask task = new TimerTask() {
+                    private int count = 0;
+                    @Override
+                    public void run() {
+                        count++;
+                        for (String serialNo : serialNoList) {
+                            ChannelHandlerContext context = ONLINE_CHANNELS.get(serialNo);
+                            if (context != null){
+                                try {
+                                    context.writeAndFlush("0106040E0000E939").sync();
+                                } catch (InterruptedException e) {
+                                    log.error("发送声光关闭指令到控制器 {} 失败: {}", serialNo, e.getMessage());
+                                }
+                            }
+                        }
+                        log.error("发送声光停止指令到控制器 {} 结束", split[0]);
+                        if (count == 2) {
+                            timer.cancel(); // 任务执行两次后取消定时器
+                        }
+                    }
+                };
+                // 设置定时任务，延迟60000毫秒后开始，只执行一次
+                timer.schedule(task, Integer.parseInt(split[1]) * 1000L, 60 * 1000L);
+            }
+        } catch (NumberFormatException e) {
+            log.error("发送声光报警指令失败: {}", e.getMessage(), e);
         }
     }
 
