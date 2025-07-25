@@ -122,4 +122,15 @@ public interface IDataPtBiz {
      * @return: com.dzkj.common.util.ResponseUtil
      **/
     List<PointDataXyzhVO> dataXyzhListChart(PtDataChartCondition condition);
+
+    /**
+     * 更新三维数据坐标，并重新计算
+     *
+     * @description 更新三维数据坐标，并重新计算
+     * @author jing.fang
+     * @date 2025/7/25 上午10:36
+     * @param data data
+     * @return: com.dzkj.common.util.ResponseUtil
+     **/
+    ResponseUtil updateData(PtDataUpdateAndCalculate data);
 }

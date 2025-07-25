@@ -96,7 +96,7 @@ public class DataController {
     @RequestMapping(value = "common/app/data/pt/chart", method = RequestMethod.POST)
     @SysOperateLog(value = "获取app图表分析数据", type = LogConstant.RETRIEVE, modelName = LogConstant.DATA_POINT)
     public ResponseUtil dataListChart(@RequestBody PtDataChartCondition condition){
-        if (condition.getSelectIds() == null || condition.getSelectIds().size() == 0) {
+        if (condition.getSelectIds() == null || condition.getSelectIds().isEmpty()) {
             return ResponseUtil.success(new ArrayList<>());
         }
         if (condition.getIsXyz()){
@@ -115,5 +115,11 @@ public class DataController {
     @SysOperateLog(value = "获取轴力数据模版", type = LogConstant.RETRIEVE, modelName = LogConstant.DATA_UPLOAD)
     public ResponseUtil getZlUploadData(@PathVariable("groupId")Long groupId){
         return dataBiz.getZlUploadData(groupId);
+    }
+
+    @RequestMapping(value = "data/update/pt/calculate", method = RequestMethod.POST)
+    @SysOperateLog(value = "更新坐标", type = LogConstant.UPDATE, modelName = LogConstant.DATA_POINT)
+    public ResponseUtil updateData(@RequestBody PtDataUpdateAndCalculate data){
+        return dataPtBiz.updateData(data);
     }
 }

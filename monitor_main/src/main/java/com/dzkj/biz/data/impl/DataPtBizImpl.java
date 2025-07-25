@@ -258,6 +258,20 @@ public class DataPtBizImpl implements IDataPtBiz {
         return DzBeanUtils.listCopy(pointDataXyzhService.list(wrapper1), PointDataXyzhVO.class);
     }
 
+    @Override
+    public ResponseUtil updateData(PtDataUpdateAndCalculate data) {
+        boolean update;
+        if(data.getIsXyz()) {
+            update = pointDataXyzhService.updateById(DzBeanUtils.propertiesCopy(data, PointDataXyzh.class));
+        } else {
+            update = pointDataZService.updateById(DzBeanUtils.propertiesCopy(data, PointDataZ.class));
+        }
+        if(update){
+            reCalculateData(DzBeanUtils.propertiesCopy(data, PtDataCalculate.class));
+        }
+        return update ? ResponseUtil.success() : ResponseUtil.failure();
+    }
+
     /**
      * 进行重新计算(数据导入逻辑)
      * 重新计算时，需要判断各行的超限情况，若出现超限时，设置超限标识并记录超限信息，但不生成报警记录；
@@ -318,7 +332,7 @@ public class DataPtBizImpl implements IDataPtBiz {
             wrapper.eq(PointDataZ::getPid, calculate.getPid()).eq(PointDataZ::getStop, false)
                     .orderByAsc(PointDataZ::getGetTime);
             List<PointDataZ> list = pointDataZService.list(wrapper);
-            if(list.size() == 0) {
+            if(list.isEmpty()) {
                 return;
             }
             for (int i = 0; i < list.size(); i++) {
